@@ -1,0 +1,108 @@
+/**
+ * A register's cross-section on the Journey Overview.
+ *
+ * Every colour comes from `--stage-ink` / `--stage-wash`, set per segment by the
+ * component from the stage's tone — so this file names none, and the palette stays
+ * in `tokens.css` (AGENTS.md §7).
+ *
+ * Restrained on purpose: a 6px bar and a text legend, no axis, no gridlines, no
+ * percentage. It has to read as a sentence about the register rather than as a
+ * chart widget, because the Overview is a page you read (UX_SPEC.md §7).
+ */
+
+.cross-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.cross-section__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+/* The register's name, and the way into it. */
+.cross-section__kind {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: var(--font-display);
+  font-size: var(--text-title);
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.cross-section__kind:hover {
+  color: var(--violet-ink);
+}
+
+.cross-section__total {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  color: var(--ink-tertiary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cross-section__bar {
+  display: flex;
+  gap: 2px;
+  height: 6px;
+}
+
+.cross-section__segment {
+  /* Never collapses to nothing: a count of one must still be visible. */
+  min-width: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--stage-ink);
+}
+
+/*
+ * A stage recorded outside the register's set. Hatched rather than solid, so it
+ * reads as unfiled instead of as another stage — matching `.stage-chip--off-set`.
+ */
+.cross-section__segment--off-set {
+  background: repeating-linear-gradient(135deg, var(--rule-strong) 0 3px, transparent 3px 6px);
+}
+
+.cross-section__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+}
+
+.cross-section__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.cross-section__swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--stage-ink);
+  flex-shrink: 0;
+}
+
+.cross-section__label {
+  font-size: var(--text-meta);
+  color: var(--ink-secondary);
+}
+
+.cross-section__count {
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.cross-section__empty,
+.cross-section__note {
+  font-size: var(--text-micro);
+  color: var(--ink-tertiary);
+}

@@ -1,0 +1,218 @@
+/**
+ * Register — a set of tracked things, read as a list grouped by stage.
+ *
+ * Deliberately not a board. A stage vocabulary the user types has no defined
+ * order, so columns would imply a progression the data does not have, and
+ * AGENTS.md §12 rules out a kanban as the product metaphor anyway. Rows in a
+ * ledger is the right form for this world (D-033).
+ */
+
+.register {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.register__tally {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.register__composer {
+  margin: 0;
+}
+
+/* The way into the register's vocabulary, beside the counts it describes. */
+.register__stages-button {
+  flex-shrink: 0;
+}
+
+/* --- groups -------------------------------------------------------------- */
+
+.register__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* A stage heading is a section marking, so it reads as one: label, count, rule. */
+.register__group-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.register__group-head .section-label {
+  color: var(--ink-secondary);
+}
+
+.register__group-count {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  color: var(--ink-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.register__group-rule {
+  flex: 1;
+  height: 1px;
+  background: var(--rule);
+}
+
+/*
+ * A stage of the set that nothing is at. Indented to the row grid so the absence
+ * sits where the rows would be, which is what makes it read as "this stage, empty"
+ * rather than as a stray line of text.
+ */
+.register__group-empty {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-micro);
+  color: var(--ink-tertiary);
+}
+
+/* --- rows ---------------------------------------------------------------- */
+
+.register__rows {
+  display: flex;
+  flex-direction: column;
+}
+
+/*
+ * One tracked thing. A row rather than a card: a register is scanned down its
+ * left edge, and forty cards would be forty frames around one line of text —
+ * the same reasoning that made Today a table rather than cards (D-034).
+ */
+.register__row {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.register__rows li + li .register__row {
+  /* A hairline between peers, quieter than a full rule. */
+  box-shadow: inset 0 1px 0 var(--rule-faint);
+}
+
+.register__row:hover {
+  background: var(--sunk);
+}
+
+.register__row-icon {
+  display: inline-grid;
+  place-items: center;
+  color: var(--ink-tertiary);
+}
+
+.register__row-title {
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  color: var(--ink);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.register__row-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+.register__row-count {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  color: var(--ink-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.register__row-when {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-micro);
+  color: var(--ink-tertiary);
+}
+
+/* --- the adoption offer -------------------------------------------------- */
+
+/**
+ * What the app thinks it found in titles the user already wrote.
+ *
+ * In the app's own violet — this is the one place the interface is *suggesting*
+ * something rather than reporting it, and the wash marks that difference without
+ * a warning colour, because nothing here is wrong.
+ */
+.register__proposal {
+  padding: var(--space-4);
+  border: 1px dashed var(--violet-rule);
+  border-radius: var(--radius-md);
+  background: var(--violet-wash);
+}
+
+.register__proposal-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-meta);
+  font-weight: var(--weight-medium);
+  color: var(--violet-ink);
+  margin-bottom: var(--space-3);
+}
+
+.register__proposal-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.register__proposal-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.register__proposal-title {
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  color: var(--ink);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The stages it would create, so the split is visible before it is accepted. */
+.register__proposal-stages {
+  font-size: var(--text-micro);
+  color: var(--ink-secondary);
+}
+
+.register__proposal-note {
+  margin-top: var(--space-3);
+  font-size: var(--text-micro);
+  color: var(--ink-secondary);
+  line-height: 1.6;
+}
+
+@media (max-width: 760px) {
+  .register__proposal-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  /* The stage preview drops to its own line rather than squeezing the name. */
+  .register__proposal-stages {
+    grid-column: 1 / -1;
+  }
+}

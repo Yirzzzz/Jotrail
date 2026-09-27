@@ -1,0 +1,18 @@
+dist
+node_modules
+src-tauri/target
+src-tauri/gen
+package-lock.json
+*.md
+src/test
+**/*.test.*
+**/*.spec.*
+src-tauri/local-tests
+scripts
+vitest.config.local.ts
+tsconfig.local-tests.json
+
+# Vendored tooling: the Impeccable design skill, installed by
+# `npx impeccable install`. Not this project's source.
+.cursor
+.claude

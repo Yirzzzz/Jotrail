@@ -1,0 +1,314 @@
+/**
+ * Design tokens — THE QUIET LEDGER (D-033).
+ *
+ * The world: a white editorial page kept in a soft lavender binder. The centre
+ * column is plain paper; the left binder edge and the right margin are tinted a
+ * degree away from it, and violet is the one colour that means *this is yours,
+ * and it is live*.
+ *
+ * Three rules hold it together:
+ *
+ * - **The page is flat.** No ruled grid, no radial wash, no texture. Separation
+ *   comes from a 1px rule, a tint step, or whitespace — in that order.
+ * - **Serif for what the user wrote, sans for what the app says.** Dates, titles
+ *   and headings take the display serif; every label, control and readout is
+ *   sans or mono. That split is the whole typographic idea.
+ * - **Gradients belong to traces and to the one primary action.** Text never
+ *   sits in a gradient; it uses that pen's deep stop (`--pen-N-ink`), which is
+ *   chosen to clear 4.5:1 on white.
+ *
+ * Light only (D-032 still stands). A dark page needs its own pen set rather
+ * than an inversion of these four.
+ */
+
+:root {
+  /* Native scrollbars, form controls and caret follow the page. */
+  color-scheme: light;
+
+  /* --- the page --------------------------------------------------------- */
+
+  /*
+   * Four grounds, each one step apart. `paper` is the reading column and the
+   * app's true white; `binder` is the left nav; `margin` is the right rail;
+   * `sunk` is a well inside a card.
+   */
+  --paper: #ffffff;
+  --binder: #f8f8fb;
+  --margin: #fafafa;
+  --sheet: #ffffff;
+  --sunk: #f4f4f6;
+
+  /* --- ink -------------------------------------------------------------- */
+
+  /*
+   * Every ink clears WCAG AA (4.5:1) against the *worst* ground, `--sunk`, not
+   * just against white — metadata tends to sit in exactly those wells.
+   *
+   * Measured on paper / binder / sunk:
+   *   --ink            17.6 / 16.9 / 15.7
+   *   --ink-secondary   7.4 /  7.1 /  6.6
+   *   --ink-tertiary    5.1 /  4.9 /  4.5
+   */
+  --ink: #18181f;
+  --ink-secondary: #55555f;
+  --ink-tertiary: #6e6e7a;
+
+  --rule: #ececf0;
+  --rule-strong: #dcdce2;
+
+  /*
+   * `rule-faint` separates rows of the same kind — one channel band from the
+   * next — where a full `--rule` would be too loud (D-033).
+   */
+  --rule-faint: #f4f4f7;
+
+  /*
+   * The one ruled surface in the app. A chart lane draws divisions against its
+   * own hour axis, aligned with the labelled ticks beneath it. The page itself
+   * carries no grid (D-033), so this is the *only* consumer of a ruling colour.
+   */
+  --axis-rule: rgba(24, 24, 32, 0.06);
+
+  /* --- the four pens ---------------------------------------------------- */
+
+  /*
+   * A Journey's channel colour, assigned by id hash (`lib/pens.ts`). The family
+   * runs violet → blue → indigo → pink: deliberately no orange or green, so
+   * four Journeys on one screen still read as one palette rather than a
+   * category legend. Each pen carries:
+   *   `-from`/`-to`  the trace gradient
+   *   `-ink`         the deep stop, for text and 1px rules (AA on white)
+   *   `-wash`        a low-alpha tint, for a channel's own ground
+   */
+  --pen-1-from: #8b5cf6;
+  --pen-1-to: #d946ef;
+  --pen-1-ink: #6d28d9;
+  --pen-1-wash: rgba(139, 92, 246, 0.1);
+
+  --pen-2-from: #3b82f6;
+  --pen-2-to: #8b5cf6;
+  --pen-2-ink: #1d4ed8;
+  --pen-2-wash: rgba(59, 130, 246, 0.1);
+
+  --pen-3-from: #6366f1;
+  --pen-3-to: #22d3ee;
+  --pen-3-ink: #4338ca;
+  --pen-3-wash: rgba(99, 102, 241, 0.1);
+
+  --pen-4-from: #ec4899;
+  --pen-4-to: #fb7185;
+  --pen-4-ink: #be185d;
+  --pen-4-wash: rgba(236, 72, 153, 0.1);
+
+  /*
+   * The app's own violet, for chrome that belongs to no channel: the selected
+   * nav row, the primary action, the live marker, the focus ring.
+   */
+  --violet: #7c5cf0;
+  --violet-ink: #6d28d9;
+  --violet-wash: #f3f0fe;
+  --violet-wash-strong: #e9e3fc;
+  --violet-rule: #ddd4fa;
+
+  /*
+   * A filled violet block, for the one action a rail or a dialog leads with.
+   * `--violet-wash` is a *tint behind text* — at #f3f0fe it disappears against
+   * the margin's #fafafa, which is exactly what happened to the rail's Record
+   * button. A control that has to read as a control needs its own step.
+   */
+  --violet-fill: #ece7fd;
+  --violet-fill-hover: #e0d8fb;
+
+  /* Kept under the old name so the trace code keeps reading one variable. */
+  --stylus: #7c5cf0;
+  --stylus-glow: rgba(124, 92, 240, 0.16);
+
+  /* --- semantic --------------------------------------------------------- */
+
+  --success: #15803d;
+  --success-wash: #eafaf0;
+  --warning: #a16207;
+  --warning-wash: #fdf6e3;
+  --danger: #be123c;
+  --danger-wash: #fdeaee;
+
+  --selection: rgba(124, 92, 240, 0.18);
+  --backdrop: rgba(24, 24, 32, 0.28);
+
+  /* --- stage tones ------------------------------------------------------ */
+
+  /*
+   * The palette a user picks a stage's colour from.
+   *
+   * **Six names, no colour picker.** The user chooses a *meaning* and this block
+   * owns the hue, which is what keeps a self-defined vocabulary inside the
+   * design system: every tone is drawn from the palette already above, so a
+   * register full of stages cannot introduce a colour this file has not
+   * approved. A free hex field would be a hard-coded colour in the database
+   * (AGENTS.md §7) with no guarantee of contrast or of surviving a retheme.
+   *
+   * Each tone is a pair: `-ink` carries text and the card's left edge and clears
+   * 4.5:1 on `--paper`; `-wash` is a tint behind a chip. Nothing here is ever
+   * the only signal — a stage always renders its own name beside the colour, so
+   * the register reads in greyscale (the rule `pens.ts` follows for channels).
+   *
+   * `neutral` is the default and stays deliberately quiet: most stages of most
+   * registers are just where a thing currently is, and a page where every row
+   * shouts is the dashboard overload UX_SPEC.md §7 rules out.
+   */
+  --stage-neutral-ink: #55555f;
+  --stage-neutral-wash: #f4f4f6;
+  --stage-channel-ink: #4338ca;
+  --stage-channel-wash: #eef0fe;
+  --stage-warm-ink: #6d28d9;
+  --stage-warm-wash: #f3f0fe;
+  --stage-positive-ink: #15803d;
+  --stage-positive-wash: #eafaf0;
+  --stage-caution-ink: #a16207;
+  --stage-caution-wash: #fdf6e3;
+  --stage-negative-ink: #be123c;
+  --stage-negative-wash: #fdeaee;
+
+  /* --- type ------------------------------------------------------------- */
+
+  /*
+   * Self-hosted faces (offline-first; no network on the critical path).
+   *
+   * Source Serif 4 is the display voice: dates, page titles, headings — the
+   * words that belong to the user's own record. Inter is the interface voice:
+   * labels, controls, body copy. Mono is for readouts only — timestamps,
+   * counts, designations.
+   *
+   * `YaHei Subset` sits **first in both stacks** and is scoped by
+   * `unicode-range` to CJK only (`fonts.css`), which is what makes the split
+   * work: Chinese resolves to YaHei, Latin and digits fall straight through to
+   * Source Serif or Inter. Putting it first is deliberate — a stack is consulted
+   * in order, and the previous version had it last, behind PingFang SC, so it
+   * could never win. The user supplied the files precisely because they wanted
+   * YaHei's shapes rather than PingFang's (D-035).
+   *
+   * The system faces stay behind it as the fallback for any machine without the
+   * bundled subset, and for CJK outside the ranges it covers.
+   */
+  --font-display:
+    'YaHei Subset', 'Source Serif 4 Variable', ui-serif, Georgia, 'PingFang SC',
+    'Hiragino Sans GB', sans-serif;
+  --font-sans:
+    'YaHei Subset', 'Inter Variable', ui-sans-serif, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /*
+   * The scale. `stamp` is the date on Today — the one piece of type allowed to
+   * be large. `hero` is a Journey's name, `page` a screen title, `section` a
+   * heading inside a column.
+   */
+  --text-stamp: clamp(2.25rem, 4vw, 3.5rem);
+  --text-hero: clamp(1.875rem, 2.8vw, 2.5rem);
+  --text-page: 2.125rem;
+  --text-section: 1.0625rem;
+  --text-title: 1.0625rem;
+  --text-body: 0.9375rem;
+  --text-reading: 1rem;
+  --text-meta: 0.8125rem;
+  --text-micro: 0.6875rem;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* --- rhythm ----------------------------------------------------------- */
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 2.5rem;
+  --space-8: 3rem;
+
+  /* Softer than the previous instrument world: this is a notebook, not a panel. */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 999px;
+
+  /* Chart geometry. The pitch tokens went with the viewport grid (D-033). */
+  --trace-weight: 1.75px;
+
+  /*
+   * Depth is nearly absent by design: a 1px rule separates, and a shadow only
+   * lifts something that genuinely floats (menus, dialogs).
+   */
+  --shadow-subtle: 0 1px 2px rgba(24, 24, 32, 0.04);
+  --shadow-raised: 0 1px 2px rgba(24, 24, 32, 0.05), 0 6px 20px rgba(24, 24, 32, 0.06);
+  --shadow-overlay: 0 8px 20px rgba(24, 24, 32, 0.09), 0 28px 56px rgba(24, 24, 32, 0.13);
+
+  /* --- layout ----------------------------------------------------------- */
+
+  --sidebar-width: 232px;
+  --rail-width: 304px;
+  --reading-measure: 68ch;
+  --timeline-date-column: 56px;
+  --topbar-height: 52px;
+
+  /* --- motion ----------------------------------------------------------- */
+
+  /*
+   * Exponential ease-out throughout: a page turning and a pen arm both
+   * decelerate, they do not bounce back past their rest position. The one place
+   * overshoot is physically true — the sheet settling after a scrub is released
+   * — is an actual damped spring in `lib/spring.ts`, because a canned bounce
+   * curve only imitates that and gets the settle wrong.
+   */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-fast: 140ms var(--ease-out-expo);
+  --transition-base: 220ms var(--ease-out-expo);
+  --transition-slow: 320ms var(--ease-out-expo);
+
+  /* --- compatibility aliases -------------------------------------------- */
+
+  /*
+   * Older names, still referenced by screens not yet rewritten onto the current
+   * vocabulary. They resolve to the new world, so no surface renders in the
+   * retired palette. Delete an alias as its last consumer is migrated.
+   */
+  --bg-app: var(--paper);
+  --bg-surface: var(--sheet);
+  --bg-subtle: var(--sunk);
+  --bg-warm: var(--violet-wash);
+  --text-primary: var(--ink);
+  --text-secondary: var(--ink-secondary);
+  --text-tertiary: var(--ink-tertiary);
+  --border: var(--rule);
+  --border-strong: var(--rule-strong);
+  --accent: var(--violet-ink);
+  --accent-soft: var(--violet-wash);
+  --accent-warm: var(--violet-ink);
+  --accent-warm-soft: var(--violet-wash);
+  --accent-contrast: #ffffff;
+  --accent-hover: #5b21b6;
+  --danger-soft: var(--danger-wash);
+  --on-media: #ffffff;
+  --on-media-muted: rgba(255, 255, 255, 0.82);
+}
+
+/**
+ * Reduced motion.
+ *
+ * The transitions collapse to zero and the recorder stops animating: a trace
+ * renders complete instead of drawing itself, and the live marker holds still.
+ * What does *not* change is anything the motion was carrying — the NOW line,
+ * the trace shape and every state stay exactly as legible, because none of them
+ * were ever communicated by movement alone.
+ */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --transition-fast: 0ms;
+    --transition-base: 0ms;
+    --transition-slow: 0ms;
+  }
+}

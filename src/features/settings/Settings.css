@@ -1,0 +1,168 @@
+/**
+ * Settings, as the instrument's specification plate.
+ *
+ * A two-column table of label and value rather than the flex rows the screen
+ * used before: those pushed the value hard against the right edge of a
+ * full-width column, so a database path ran off the sheet entirely.
+ */
+
+.settings {
+  padding: var(--space-7) var(--space-6) var(--space-8);
+  /* A specification plate is a reading surface, so it takes a measure. */
+  max-width: 76ch;
+}
+
+.settings__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-7);
+}
+
+.settings__title {
+  margin: 0;
+}
+
+.settings__language {
+  width: 100%;
+  max-width: 240px;
+}
+
+.settings__section + .settings__section {
+  margin-top: var(--space-7);
+}
+
+.settings__section-title {
+  display: block;
+  margin-bottom: var(--space-4);
+}
+
+.settings__help {
+  margin-block: var(--space-3);
+  color: var(--ink-secondary);
+  font-size: var(--text-meta);
+  line-height: 1.7;
+}
+
+.settings__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-block: var(--space-3);
+}
+
+.settings__records {
+  list-style: none;
+  padding: 0;
+  margin-block: var(--space-4);
+  max-height: 300px;
+  overflow-y: auto;
+  border-top: 1px solid var(--rule);
+}
+
+.settings__records li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-block: var(--space-3);
+  border-bottom: 1px solid var(--rule);
+  font-size: var(--text-meta);
+}
+
+.settings__records li > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.settings__records small {
+  display: block;
+  color: var(--ink-tertiary);
+  margin-top: var(--space-1);
+}
+.settings__records .button {
+  flex-shrink: 0;
+}
+.settings__result {
+  overflow-wrap: anywhere;
+  font-size: var(--text-meta);
+  color: var(--success);
+  line-height: 1.7;
+}
+
+/* --- the specification table --------------------------------------------- */
+
+.spec {
+  margin: 0;
+  border-top: 1px solid var(--rule);
+}
+
+/**
+ * Label left, value right, on a fixed label column so the values align down the
+ * plate. `minmax(0, 1fr)` is what lets a long path wrap instead of forcing the
+ * grid wider than its container.
+ */
+.spec__row {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.spec__label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-meta);
+  color: var(--ink-secondary);
+}
+
+.spec__label svg {
+  color: var(--ink-tertiary);
+  flex-shrink: 0;
+}
+
+.spec__value {
+  margin: 0;
+  font-size: var(--text-meta);
+  color: var(--ink);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* A filesystem path is measured data: mono, and it may wrap mid-token. */
+.spec__value--path {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  line-height: 1.6;
+}
+
+/* --- privacy ------------------------------------------------------------- */
+
+.settings__privacy {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  max-width: 62ch;
+  color: var(--ink-secondary);
+  line-height: 1.7;
+}
+
+.settings__privacy-icon {
+  color: var(--success);
+  flex-shrink: 0;
+  /* Optically aligned to the first line rather than the text box. */
+  margin-top: 0.2em;
+}
+
+@media (max-width: 900px) {
+  .settings {
+    padding-inline: var(--space-5);
+  }
+
+  /* Stack the plate: 180px of label plus a path does not fit here. */
+  .spec__row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-1);
+  }
+}

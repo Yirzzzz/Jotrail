@@ -1,0 +1,62 @@
+/**
+ * Self-hosted CJK face — Microsoft YaHei, supplied by the user (D-035).
+ *
+ * Registered as one family in two weights, which is what lets `font-weight: 700`
+ * on a heading pick up the real bold rather than a synthesised one. The two
+ * files are genuinely separate faces; YaHei ships no variable axis.
+ *
+ * **`unicode-range` is the whole point of this file.** It restricts these faces
+ * to CJK codepoints, so the browser never downloads or consults a 5MB font to
+ * render Latin text — and, more importantly, Latin and digits keep falling
+ * through to Source Serif / Inter. That is the reference's own mix: 「秋招 2026」
+ * sets the Chinese in a sans and the figures in the serif.
+ *
+ * Subset from the 15MB originals in `docs/ttfs/` to the CJK unified block plus
+ * CJK punctuation and fullwidth forms: 28MB of TTF became 10.3MB of woff2. That
+ * is heavy for a web page and unremarkable for a desktop app, where the font
+ * ships inside the bundle and never crosses a network.
+ *
+ * LICENSING: Microsoft YaHei is a commercial font licensed for distribution with
+ * Windows and Office. Bundling it in a redistributed application is outside that
+ * licence. Fine for the user's own build; **replace with Noto Sans SC / Source
+ * Han Sans before publishing** — open licence, near-identical structure, and a
+ * variable version that would cut this weight further.
+ */
+
+/* The CJK ranges these faces are allowed to serve. */
+@font-face {
+  font-family: 'YaHei Subset';
+  src: url('../assets/fonts/yahei-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range:
+    U+2E80-2EFF, U+3000-303F, U+3200-33FF, U+4E00-9FFF, U+F900-FAFF, U+FE30-FE4F, U+FF00-FFEF;
+}
+
+@font-face {
+  font-family: 'YaHei Subset';
+  src: url('../assets/fonts/yahei-700.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range:
+    U+2E80-2EFF, U+3000-303F, U+3200-33FF, U+4E00-9FFF, U+F900-FAFF, U+FE30-FE4F, U+FF00-FFEF;
+}
+
+/*
+ * 500 and 600 are used throughout the interface (`--weight-medium`,
+ * `--weight-semibold`). YaHei has no face at either, so without these rules the
+ * browser synthesises a fake bold by smearing the 400 outline — which on CJK
+ * strokes turns into mud at small sizes. Mapping them onto the real 700 file
+ * gives an honest weight instead.
+ */
+@font-face {
+  font-family: 'YaHei Subset';
+  src: url('../assets/fonts/yahei-700.woff2') format('woff2');
+  font-weight: 500 600;
+  font-style: normal;
+  font-display: swap;
+  unicode-range:
+    U+2E80-2EFF, U+3000-303F, U+3200-33FF, U+4E00-9FFF, U+F900-FAFF, U+FE30-FE4F, U+FF00-FFEF;
+}

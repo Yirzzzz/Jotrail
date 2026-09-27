@@ -1,0 +1,313 @@
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: center;
+  padding: var(--space-6);
+  background: var(--backdrop);
+  animation: modal-backdrop var(--transition-base);
+}
+
+.modal--dialog {
+  align-items: center;
+}
+
+/* The command palette sits high, where the eye already is. */
+.modal--command {
+  align-items: flex-start;
+  padding-top: 12vh;
+}
+
+.modal__panel {
+  width: 100%;
+  max-width: 460px;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--sheet);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-overlay);
+  overflow: hidden;
+  animation: modal-panel var(--transition-base);
+}
+
+.modal--command .modal__panel {
+  max-width: 560px;
+}
+
+.modal__header {
+  padding: var(--space-5) var(--space-5) 0;
+}
+
+.modal__title {
+  font-size: var(--text-title);
+  font-weight: var(--weight-semibold);
+}
+
+.modal__description {
+  margin-top: var(--space-2);
+  font-size: var(--text-meta);
+  color: var(--ink-secondary);
+  line-height: 1.6;
+}
+
+/**
+ * Callers usually wrap the body and footer in a <form>, which then sits between
+ * the height-capped panel and the scrolling body. Without this it keeps its full
+ * content height, and since the panel is `overflow: hidden` the footer — and the
+ * submit button in it — gets clipped out of reach on a short window.
+ *
+ * `min-height: 0` is the part that matters: a flex item defaults to
+ * `min-height: auto` and refuses to shrink below its content.
+ */
+.modal__panel > form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.modal__body {
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  /* Only this region scrolls, so the footer stays reachable. */
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+}
+
+.modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--rule);
+  background: var(--paper);
+  /* Never the thing that gets compressed away when space runs short. */
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.modal__footer-hint {
+  margin-right: auto;
+  font-size: var(--text-meta);
+  color: var(--ink-tertiary);
+}
+
+@keyframes modal-backdrop {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes modal-panel {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal,
+  .modal__panel {
+    animation: none;
+  }
+}
+
+/* --- icon picker --------------------------------------------------------- */
+
+.icon-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.icon-picker__option {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--rule);
+  background: var(--sheet);
+  color: var(--ink-secondary);
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.icon-picker__option:hover {
+  border-color: var(--rule-strong);
+  color: var(--ink);
+}
+
+.icon-picker__option[aria-pressed='true'] {
+  border-color: var(--pen-1-ink);
+  background: var(--pen-1-wash);
+  color: var(--pen-1-ink);
+}
+
+/* --- command palette ----------------------------------------------------- */
+
+.command__search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-tertiary);
+}
+
+.command__input {
+  flex: 1;
+  border: none;
+  background: none;
+  font-size: 1rem;
+  color: var(--ink);
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.command__input:focus {
+  outline: none;
+}
+
+.command__input::placeholder {
+  color: var(--ink-tertiary);
+}
+
+.command__results {
+  overflow-y: auto;
+  max-height: 50vh;
+  padding: var(--space-2);
+}
+
+.command__group + .command__group {
+  margin-top: var(--space-2);
+}
+
+.command__group-label {
+  padding: var(--space-2) var(--space-3);
+}
+
+.command__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  text-align: left;
+  color: var(--ink);
+  font-size: var(--text-body);
+}
+
+.command__item:hover,
+.command__item[data-active='true'] {
+  background: var(--sunk);
+}
+
+.command__item-icon {
+  display: grid;
+  place-items: center;
+  color: var(--ink-tertiary);
+  flex-shrink: 0;
+}
+
+.command__item-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * The state a result is at, when it has one. Sits between the name and the date,
+ * because that reads as a sentence — "TMM, 返修, 3 weeks ago" — and because two
+ * results with the same name are told apart by exactly this (D-046, D-047).
+ */
+.command__item-badge {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.command__item-hint {
+  font-size: var(--text-meta);
+  color: var(--ink-tertiary);
+  flex-shrink: 0;
+}
+
+.command__empty {
+  padding: var(--space-5);
+  text-align: center;
+  font-size: var(--text-meta);
+  color: var(--ink-tertiary);
+}
+
+/* --- work an event revealed ---------------------------------------------- */
+
+/**
+ * The list of tasks an event produced, built up inside the record dialog.
+ *
+ * Rows rather than pills: these are sentences the user is writing, often long
+ * enough to wrap, and a pill would truncate the one thing worth reading.
+ */
+.revealed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.revealed__row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--sunk);
+}
+
+/*
+ * A leading dash, so the rows read as a list without a bullet's indent. The
+ * task does not exist yet — it is created with the event — so it gets no
+ * checkbox: an unchecked box here would imply it were already filed.
+ */
+.revealed__row::before {
+  content: '—';
+  color: var(--ink-tertiary);
+  flex-shrink: 0;
+  line-height: 1.5;
+}
+
+.revealed__title {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-meta);
+  color: var(--ink);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.revealed__composer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+/* A due date beside a to-do recorded with an event. */
+.revealed__due {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  color: var(--ink-tertiary);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  white-space: nowrap;
+}

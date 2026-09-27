@@ -1,0 +1,905 @@
+/**
+ * Three-region desktop layout: channel rail | sheet | margin
+ * (UX_SPEC.md §3). The margin collapses below 1180px so the reading column keeps
+ * a comfortable measure on a typical laptop.
+ *
+ * In the recorder (D-032) the three regions are the instrument's own parts:
+ * the left rail is the **channel strip** (which pens exist), the centre is the
+ * **sheet** (what they drew), and the right is the **margin** (annotations the
+ * analyst adds beside the chart). The top bar is the instrument's fascia.
+ */
+/**
+ * The sidebar spans **both** rows, so the binder edge runs the full height of
+ * the window and the brand sits at its head. The top bar starts at the sidebar's
+ * right edge, which is what makes its bottom rule stop there rather than cutting
+ * across the nav (reference screens, all four).
+ */
+.shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr) var(--rail-width);
+  grid-template-rows: var(--topbar-height) minmax(0, 1fr);
+  grid-template-areas:
+    'sidebar topbar topbar'
+    'sidebar main rail';
+  height: 100vh;
+  background: var(--paper);
+}
+
+.shell--no-rail {
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  grid-template-areas:
+    'sidebar topbar'
+    'sidebar main';
+}
+
+.shell--no-sidebar {
+  grid-template-columns: minmax(0, 1fr) var(--rail-width);
+  grid-template-areas:
+    'topbar topbar'
+    'main rail';
+}
+
+.shell--no-sidebar.shell--no-rail {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    'topbar'
+    'main';
+}
+
+@media (max-width: 1180px) {
+  .shell {
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+    grid-template-areas:
+      'sidebar topbar'
+      'sidebar main';
+  }
+
+  /* The rail becomes an overlay drawer rather than disappearing entirely. */
+  .shell__rail {
+    position: fixed;
+    top: var(--topbar-height);
+    right: 0;
+    bottom: 0;
+    width: var(--rail-width);
+    z-index: 30;
+    box-shadow: var(--shadow-overlay);
+  }
+
+  .shell__rail[data-drawer='closed'] {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .shell,
+  .shell--no-rail {
+    grid-template-columns: 64px minmax(0, 1fr);
+    grid-template-areas:
+      'sidebar topbar'
+      'sidebar main';
+  }
+}
+
+/* --- top bar ------------------------------------------------------------- */
+
+/**
+ * The top bar. Sits above the reading column, so it is the one surface that
+ * stays opaque while the page scrolls under it.
+ *
+ * It no longer spans the sidebar, so it needs no traffic-light inset: the window
+ * controls fall over the sidebar's own header strip instead (`.sidebar__top`).
+ */
+.topbar {
+  grid-area: topbar;
+  display: grid;
+  grid-template-columns: 1fr minmax(0, auto) 1fr;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper);
+  z-index: 20;
+}
+
+.topbar__left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.topbar__right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1);
+}
+
+/* Reads as a field, behaves as a button — the palette owns the actual input. */
+.topbar__search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: min(420px, 100%);
+  padding: 0.4375rem var(--space-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  background: var(--sunk);
+  color: var(--ink-tertiary);
+  font-size: var(--text-meta);
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.topbar__search:hover {
+  border-color: var(--rule-strong);
+  background: var(--sheet);
+  color: var(--ink-secondary);
+}
+
+.topbar__search-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+/* A key on the fascia: mono, because it names a physical key. */
+.topbar__kbd {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  color: var(--ink-tertiary);
+  background: var(--sheet);
+  border: 1px solid var(--rule-strong);
+  border-radius: 3px;
+  padding: 0.0625rem 0.25rem;
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .topbar__search-label,
+  .topbar__kbd {
+    display: none;
+  }
+
+  .topbar__search {
+    width: auto;
+    padding: 0.375rem var(--space-2);
+  }
+}
+
+/* --- sidebar ------------------------------------------------------------- */
+
+/**
+ * The binder edge. Tinted one step off the paper so the reading column reads as
+ * the page and this reads as what holds it.
+ */
+.sidebar {
+  grid-area: sidebar;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--rule);
+  background: var(--binder);
+}
+
+/*
+ * The brand strip, sized to match the top bar beside it so the brand and the
+ * search field sit on one optical line. Draggable, and the macOS traffic lights
+ * land here — hence the inset on macOS-sized windows.
+ */
+.sidebar__top {
+  display: flex;
+  align-items: center;
+  height: var(--topbar-height);
+  padding: 0 var(--space-4);
+  flex-shrink: 0;
+}
+
+/* The nameplate. Serif, because the product's own name is a title too. */
+.sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+/*
+ * The mark carries all four pens as a stacked trace: the product is a
+ * multi-channel recorder, and this is the smallest honest picture of that.
+ */
+.sidebar__brand-mark {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-md);
+  background: var(--ink);
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.sidebar__scroll {
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-3) var(--space-3) var(--space-4);
+}
+
+.sidebar__section {
+  margin-top: var(--space-5);
+}
+
+.sidebar__section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-2) var(--space-2);
+}
+
+.sidebar__footer {
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  flex-shrink: 0;
+}
+
+/**
+ * A nav row.
+ *
+ * The selected row is marked three ways at once — a violet wash, a 3px violet
+ * tab on its leading edge, and violet ink at medium weight — so selection
+ * survives greyscale and never depends on a channel colour.
+ */
+.nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: 0.5rem var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-body);
+  color: var(--ink-secondary);
+  text-align: left;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.nav-item:hover {
+  background: var(--sunk);
+  color: var(--ink);
+}
+
+.nav-item[aria-current='page'] {
+  background: var(--violet-wash);
+  color: var(--violet-ink);
+  font-weight: var(--weight-medium);
+}
+
+/* The tab, marking which destination the page is showing. */
+.nav-item[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 18px;
+  border-radius: 0 2px 2px 0;
+  background: var(--violet);
+}
+
+.nav-item__icon {
+  display: grid;
+  place-items: center;
+  color: var(--ink-tertiary);
+  flex-shrink: 0;
+}
+
+.nav-item[aria-current='page'] .nav-item__icon {
+  color: var(--violet-ink);
+}
+
+/* A Journey row's icon takes its own pen, so the strip reads as four channels. */
+.journey-row .nav-item__icon {
+  color: var(--pen-ink);
+}
+
+.nav-item__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-item__count {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  color: var(--ink-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- journey row with actions -------------------------------------------- */
+
+.journey-row {
+  position: relative;
+}
+
+/* The menu button overlays the status dot on hover, so the row does not shift. */
+.journey-row__menu-button {
+  position: absolute;
+  top: 50%;
+  right: var(--space-2);
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  color: var(--ink-tertiary);
+  background: var(--sunk);
+  opacity: 0;
+  transition:
+    opacity var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.journey-row:hover .journey-row__menu-button,
+.journey-row:focus-within .journey-row__menu-button,
+.journey-row__menu-button[aria-expanded='true'] {
+  opacity: 1;
+}
+
+.journey-row__menu-button:hover {
+  color: var(--ink);
+  background: var(--rule);
+}
+
+.journey-row__menu {
+  position: absolute;
+  top: calc(100% - var(--space-1));
+  right: var(--space-2);
+  z-index: 50;
+  min-width: 148px;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  box-shadow: var(--shadow-overlay);
+}
+
+.journey-row__menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2);
+  border-radius: 6px;
+  font-size: var(--text-meta);
+  color: var(--ink);
+  text-align: left;
+  transition: background var(--transition-fast);
+}
+
+.journey-row__menu-item:hover {
+  background: var(--sunk);
+}
+
+.journey-row__menu-item--danger {
+  color: var(--danger);
+}
+
+.journey-row__menu-item--danger:hover {
+  background: var(--danger-wash);
+}
+
+/* Hide the dot while the menu button occupies the same spot. */
+.journey-row:hover .journey-dot,
+.journey-row:focus-within .journey-dot {
+  opacity: 0;
+}
+
+@media (max-width: 900px) {
+  /* No room for a hover menu in the collapsed rail. */
+  .journey-row__menu-button {
+    display: none;
+  }
+}
+
+/**
+ * Journey status, as the recorder would show a pen's condition.
+ *
+ * Status is carried by **shape**, not colour: a running pen is a filled dot, a
+ * planned one an open ring, a paused one a bar, a finished one a filled square,
+ * an archived one a hairline ring. That is the one-bit-desktop discipline —
+ * every state legible with no colour at all — and the reason these are not five
+ * dots in five hues.
+ */
+.journey-dot {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--ink-tertiary);
+  transition: opacity var(--transition-fast);
+}
+
+/* Running: a solid pen, in its own channel colour. */
+.journey-dot--active {
+  background: var(--pen-ink, var(--ink));
+}
+
+/* Planned: outlined, nothing drawn yet. */
+.journey-dot--planning {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--pen-ink, var(--ink-tertiary));
+}
+
+/* Paused: the pen lifted — a bar, not a dot. */
+.journey-dot--paused {
+  width: 8px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--ink-tertiary);
+}
+
+/* Completed: the trace closed off, so the mark squares up. */
+.journey-dot--completed {
+  border-radius: 1px;
+  background: var(--success);
+}
+
+/* Archived: still there, no longer inked. */
+.journey-dot--archived {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--rule-strong);
+}
+
+@media (max-width: 900px) {
+  .sidebar__brand-label,
+  .nav-item__label,
+  .nav-item__count,
+  .sidebar__section-header .section-label {
+    display: none;
+  }
+
+  .sidebar__brand {
+    justify-content: center;
+  }
+
+  /*
+   * Keeps the top-bar height, so the mark still sits on the same optical line as
+   * the search field beside it. The old rule set its own vertical padding and
+   * pushed the mark above that line.
+   */
+  .sidebar__top {
+    padding: 0;
+    justify-content: center;
+  }
+
+  .nav-item {
+    justify-content: center;
+  }
+}
+
+/* --- main ---------------------------------------------------------------- */
+
+/**
+ * The reading column — the page itself, and the app's one true white.
+ *
+ * It owns no rule on its right edge: the rail draws that rule from its own side,
+ * so a collapsed rail does not leave a hairline hanging in space.
+ */
+.shell__main {
+  grid-area: main;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--paper);
+}
+
+/* Draggable strip so the window still moves with a hidden titlebar. */
+.shell__drag-region {
+  height: 52px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: 0 var(--space-5);
+  border-bottom: 1px solid transparent;
+}
+
+.shell__main-scroll {
+  flex: 1;
+  min-height: 0;
+}
+
+/* --- rail ---------------------------------------------------------------- */
+
+/* The margin. Tinted a half-step off the page, like the binder on the far side. */
+.shell__rail {
+  grid-area: rail;
+  min-height: 0;
+  background: var(--margin);
+  border-left: 1px solid var(--rule);
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.rail__scroll {
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-4) var(--space-4) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/**
+ * A margin annotation: a note written beside the page. A white card on the
+ * tinted margin, so it reads as laid on top rather than cut into it.
+ */
+.rail__section {
+  padding: var(--space-4);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  background: var(--sheet);
+}
+
+.rail__section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+/* A margin heading is a structural label, like every other region marker. */
+.rail__section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-tertiary);
+}
+
+.rail__section-icon {
+  display: grid;
+  place-items: center;
+  color: var(--ink-tertiary);
+  flex-shrink: 0;
+}
+
+.rail__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0.4375rem 0;
+  font-size: var(--text-meta);
+}
+
+/* Inside a card the label/value pairs read better without hairlines. */
+.rail__row + .rail__row {
+  border-top: none;
+}
+
+/* An icon'd label, matching the reference's About rows. */
+.rail__row-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink-tertiary);
+}
+
+.rail__row-icon {
+  display: grid;
+  place-items: center;
+  color: var(--ink-tertiary);
+  flex-shrink: 0;
+}
+
+.rail__row-value {
+  color: var(--ink);
+  text-align: right;
+}
+
+.rail__empty {
+  font-size: var(--text-meta);
+  color: var(--ink-tertiary);
+  line-height: 1.6;
+}
+
+/*
+ * A line naming what a panel's contents actually are, where the heading alone
+ * would overclaim — "Related notes" needs to say *how* they are related.
+ */
+.rail__hint {
+  margin-bottom: var(--space-2);
+  font-size: var(--text-micro);
+  color: var(--ink-tertiary);
+  line-height: 1.5;
+}
+
+.rail__focus-title {
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  line-height: 1.45;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.rail__focus-when {
+  margin-top: var(--space-2);
+  font-size: var(--text-meta);
+  color: var(--ink-tertiary);
+}
+
+/* Count beside a card title, e.g. how many open to-dos there are. */
+.rail__count {
+  font-size: var(--text-micro);
+  font-weight: var(--weight-medium);
+  color: var(--ink-secondary);
+  background: var(--sunk);
+  border-radius: var(--radius-pill);
+  padding: 0.0625rem 0.375rem;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* A row that navigates: note titles, journey names. */
+.rail__link {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  font-size: var(--text-meta);
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color var(--transition-fast);
+}
+
+.rail__link:hover {
+  color: var(--pen-1-ink);
+}
+
+.rail__link--icon {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.rail__link--icon > svg {
+  color: var(--pen-1-ink);
+  flex-shrink: 0;
+}
+
+.rail__more {
+  margin-top: var(--space-2);
+  font-size: var(--text-micro);
+  color: var(--ink-tertiary);
+}
+
+.rail__action {
+  margin-top: var(--space-3);
+  width: 100%;
+  justify-content: center;
+}
+
+/**
+ * A card of figures: label left, value right, one per row.
+ *
+ * A `dl` because that is what these are — three terms and their values. The
+ * values are tabular so the column of digits aligns, which is the only reason
+ * this reads as a summary rather than as three unrelated sentences.
+ */
+.rail__stats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.rail__stat {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.rail__stat dt {
+  font-size: var(--text-meta);
+  color: var(--ink-secondary);
+}
+
+.rail__stat dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- recent changes ------------------------------------------------------ */
+
+/**
+ * A short log of state transitions. Two lines each: what changed, and what it
+ * changed from and to — which is the product's whole claim, at rail scale.
+ */
+.rail__changes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.rail__change {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.rail__change-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.rail__change-title {
+  font-size: var(--text-meta);
+  font-weight: var(--weight-medium);
+  color: var(--ink);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rail__change-time {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  color: var(--ink-tertiary);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.rail__change-detail {
+  font-size: var(--text-micro);
+  color: var(--ink-tertiary);
+  line-height: 1.5;
+}
+
+/**
+ * The rail's primary action. A violet wash rather than a filled violet: it sits
+ * at the foot of a column of white cards, and a solid fill there would outweigh
+ * everything the rail is reporting.
+ */
+.rail__record {
+  width: 100%;
+  justify-content: center;
+  padding-block: 0.625rem;
+  border-radius: var(--radius-lg);
+  background: var(--violet-fill);
+  color: var(--violet-ink);
+  font-weight: var(--weight-medium);
+}
+
+.rail__record:hover {
+  background: var(--violet-fill-hover);
+  color: var(--violet-ink);
+}
+
+/**
+ * The task list is shared with the main column, where it has room for hover
+ * actions and a comfortable row height. In a 300px rail it needs to be tighter,
+ * and the delete/file buttons would crowd the due date out.
+ */
+.rail .task-row {
+  padding: var(--space-2) 0;
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--rule);
+}
+
+.rail .task-row:last-child {
+  border-bottom: none;
+}
+
+.rail .task-row:hover {
+  background: transparent;
+}
+
+.rail .task-row__title {
+  font-size: var(--text-meta);
+  line-height: 1.45;
+}
+
+.rail .task-row__meta {
+  font-size: var(--text-micro);
+}
+
+/* Row delete belongs to the full-width list. Filing stays — a task started
+ * on Today often turns out to belong to a Journey (D-023). */
+.rail .task-row__actions > .icon-button {
+  display: none;
+}
+
+/* --- cover band ---------------------------------------------------------- */
+
+/**
+ * The photographic cover slot, kept minimal and currently unused (D-032).
+ *
+ * No screen renders a cover now: the Journey header is the channel's strip head
+ * and Today's is the sheet, so the placeholder washes that used to fill these
+ * bands were 200px of decoration on every screen. The slot itself is a standing
+ * brand commitment in PRODUCT.md — the user supplies real photographs — so
+ * `CoverImage` and the geometry it needs stay here, ready for the day a real
+ * image lands.
+ *
+ * What is gone: the six deterministic placeholder variants and the dusk wash,
+ * which were built out of `--accent-*` and `--cover-dusk-*` tokens the recorder
+ * palette no longer defines.
+ */
+.cover {
+  position: relative;
+  overflow: hidden;
+  background: var(--sunk);
+  isolation: isolate;
+}
+
+.cover__image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* The interesting band of a landscape sits above centre. */
+  object-position: center 40%;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/**
+ * Scrim. Only drawn over a real photo, so text on it stays legible whatever the
+ * image's luminance is.
+ */
+.cover[data-photo='true'] .cover__scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgb(0 0 0 / 62%) 0%,
+    rgb(0 0 0 / 28%) 46%,
+    rgb(0 0 0 / 8%) 100%
+  );
+}
+
+.cover__content {
+  position: relative;
+  height: 100%;
+  z-index: 1;
+}
+
+.cover[data-photo='true'] .cover__content {
+  color: #fff;
+}

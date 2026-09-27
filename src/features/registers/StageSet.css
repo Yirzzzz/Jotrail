@@ -1,0 +1,203 @@
+/**
+ * The stage-set editor, and the picker that attaches one to a register.
+ *
+ * No colour is named here. Each swatch reads `--stage-<tone>-ink` through a
+ * `data-tone` attribute, so the palette lives only in `tokens.css` and a new tone
+ * needs one token pair and one selector — not a component change.
+ */
+
+.stage-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/*
+ * Label, palette, controls. The label takes the slack so the swatches and the
+ * arrows stay put as rows are added.
+ */
+.stage-editor__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.stage-editor__label {
+  min-width: 0;
+}
+
+.stage-editor__tones {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+/*
+ * One swatch. 18px is small enough that six sit beside an input at 880px and
+ * large enough to stay a comfortable target.
+ */
+.stage-editor__tone {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-pill);
+  background: var(--stage-swatch, var(--sunk));
+  cursor: pointer;
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.stage-editor__tone[data-tone='neutral'] {
+  --stage-swatch: var(--stage-neutral-ink);
+}
+.stage-editor__tone[data-tone='channel'] {
+  --stage-swatch: var(--stage-channel-ink);
+}
+.stage-editor__tone[data-tone='warm'] {
+  --stage-swatch: var(--stage-warm-ink);
+}
+.stage-editor__tone[data-tone='positive'] {
+  --stage-swatch: var(--stage-positive-ink);
+}
+.stage-editor__tone[data-tone='caution'] {
+  --stage-swatch: var(--stage-caution-ink);
+}
+.stage-editor__tone[data-tone='negative'] {
+  --stage-swatch: var(--stage-negative-ink);
+}
+
+/*
+ * Selection is a ring, not a size change: the swatch must stay exactly where it
+ * was so the row does not shift as tones are tried.
+ */
+.stage-editor__tone[aria-checked='true'] {
+  box-shadow:
+    0 0 0 2px var(--paper),
+    0 0 0 3px var(--stage-swatch);
+}
+
+.stage-editor__tone:hover {
+  transform: scale(1.12);
+}
+
+.stage-editor__actions {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+.stage-editor__add {
+  align-self: flex-start;
+  margin-top: var(--space-2);
+}
+
+.stage-editor__preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  background: var(--sunk);
+}
+
+/* --- picking a stage while recording ------------------------------------- */
+
+/*
+ * The register's stages, offered inside the record dialog. A wrapping row rather
+ * than a select, because the set's colours are half of what makes it recognisable
+ * — and a native select cannot show them.
+ */
+.stage-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.stage-picker__option {
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  cursor: pointer;
+  /* Unselected stages sit back so the chosen one is the one that reads. */
+  opacity: 0.55;
+  transition:
+    opacity var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.stage-picker__option:hover {
+  opacity: 0.85;
+}
+
+.stage-picker__option[aria-pressed='true'] {
+  opacity: 1;
+  box-shadow:
+    0 0 0 1px var(--paper),
+    0 0 0 2px var(--violet);
+}
+
+/* --- attaching a set to a register --------------------------------------- */
+
+.stage-set-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.stage-set-option {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.stage-set-option:hover {
+  border-color: var(--violet-rule);
+  background: var(--violet-wash);
+}
+
+.stage-set-option__name {
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+}
+
+.stage-set-option__stages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.stage-set-option__reuse {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  color: var(--ink-tertiary);
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  /* The palette drops under the label rather than crushing the input. */
+  .stage-editor__row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .stage-editor__tones {
+    grid-column: 1 / -1;
+  }
+}

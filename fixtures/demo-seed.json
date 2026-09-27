@@ -1,0 +1,165 @@
+{
+  "journeys": [
+    {
+      "id": "journey-autumn-2026",
+      "title": "秋招 2026",
+      "description": "记录从准备秋招开始，到最终确定毕业去向的全过程。",
+      "status": "active",
+      "icon": "briefcase",
+      "startedAt": "2026-08-12T00:00:00+08:00"
+    },
+    {
+      "id": "journey-vla-study",
+      "title": "VLA 学习",
+      "description": "持续记录 VLA 论文、实验、真机实践与理解变化。",
+      "status": "active",
+      "icon": "bot",
+      "startedAt": "2026-06-10T00:00:00+08:00"
+    },
+    {
+      "id": "journey-fitness",
+      "title": "健身",
+      "description": "训练记录和阶段性变化。",
+      "status": "active",
+      "icon": "dumbbell",
+      "startedAt": "2026-01-03T00:00:00+08:00"
+    }
+  ],
+  "notes": [
+    {
+      "id": "note-byte-vla",
+      "title": "ByteDance · VLA Engineer",
+      "bodyMd": "看到这个岗位后，整体要求和目前方向比较匹配，但 ROS2 / C++ 还需要加强。先保存，不急着投。",
+      "noteType": "note",
+      "createdAt": "2026-08-25T20:30:00+08:00",
+      "updatedAt": "2026-08-25T20:30:00+08:00"
+    },
+    {
+      "id": "note-ros2-action",
+      "title": "ROS2 Action",
+      "bodyMd": "今天终于理解了 Action 与 Service 的区别。Action 更适合长时间、可取消、带反馈的任务。",
+      "noteType": "learning",
+      "createdAt": "2026-08-26T14:00:00+08:00",
+      "updatedAt": "2026-08-26T14:00:00+08:00"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task-ros2-action",
+      "title": "学习 ROS2 Action",
+      "status": "done",
+      "completedAt": "2026-08-28T18:00:00+08:00",
+      "createdAt": "2026-08-25T20:35:00+08:00",
+      "updatedAt": "2026-08-28T18:00:00+08:00"
+    },
+    {
+      "id": "task-cpp-publisher",
+      "title": "写一个 C++ Publisher",
+      "status": "done",
+      "completedAt": "2026-08-28T19:00:00+08:00",
+      "createdAt": "2026-08-25T20:36:00+08:00",
+      "updatedAt": "2026-08-28T19:00:00+08:00"
+    }
+  ],
+  "journeyLinks": [
+    {
+      "journeyId": "journey-autumn-2026",
+      "targetType": "note",
+      "targetId": "note-byte-vla",
+      "pinned": false
+    },
+    {
+      "journeyId": "journey-autumn-2026",
+      "targetType": "note",
+      "targetId": "note-ros2-action",
+      "pinned": false
+    },
+    {
+      "journeyId": "journey-vla-study",
+      "targetType": "note",
+      "targetId": "note-ros2-action",
+      "pinned": false
+    },
+    {
+      "journeyId": "journey-autumn-2026",
+      "targetType": "task",
+      "targetId": "task-ros2-action",
+      "pinned": false
+    },
+    {
+      "journeyId": "journey-autumn-2026",
+      "targetType": "task",
+      "targetId": "task-cpp-publisher",
+      "pinned": false
+    }
+  ],
+  "timelineEvents": [
+    {
+      "id": "event-byte-found",
+      "eventType": "note_logged",
+      "title": "ByteDance · VLA Engineer",
+      "summary": "保存岗位 · 暂不投递 · ROS2 / C++ 还需要加强",
+      "reflection": "感觉现在去面试可能能聊 VLA，但真机工程问题容易暴露短板，准备再补两周。",
+      "occurredAt": "2026-08-25T20:30:00+08:00",
+      "createdAt": "2026-08-25T20:30:00+08:00",
+      "sourceType": "note",
+      "sourceId": "note-byte-vla",
+      "importance": "normal",
+      "journeyIds": ["journey-autumn-2026"]
+    },
+    {
+      "id": "event-ros2-note",
+      "eventType": "note_logged",
+      "title": "ROS2 Action",
+      "summary": "学习笔记 · 理解 Action 与 Service 的区别",
+      "occurredAt": "2026-08-26T14:00:00+08:00",
+      "createdAt": "2026-08-26T14:00:00+08:00",
+      "sourceType": "note",
+      "sourceId": "note-ros2-action",
+      "importance": "normal",
+      "journeyIds": ["journey-autumn-2026", "journey-vla-study"]
+    },
+    {
+      "id": "event-ros2-growth",
+      "eventType": "state_changed",
+      "title": "ROS2 · Basic → Intermediate",
+      "summary": "完成 Action client/server demo；理解 ROS2 通信机制。",
+      "occurredAt": "2026-08-28T19:10:00+08:00",
+      "createdAt": "2026-08-28T19:10:00+08:00",
+      "importance": "normal",
+      "payload": {
+        "field": "capability",
+        "from": "basic",
+        "to": "intermediate"
+      },
+      "journeyIds": ["journey-autumn-2026", "journey-vla-study"]
+    },
+    {
+      "id": "event-byte-ready",
+      "eventType": "state_changed",
+      "title": "ByteDance · VLA Engineer",
+      "summary": "Not Ready → Ready",
+      "reflection": "完成 ROS2 Action 学习并重新梳理项目部署经验后，决定进入投递准备。",
+      "occurredAt": "2026-09-05T10:00:00+08:00",
+      "createdAt": "2026-09-05T10:00:00+08:00",
+      "importance": "milestone",
+      "payload": {
+        "field": "readiness",
+        "from": "not_ready",
+        "to": "ready"
+      },
+      "journeyIds": ["journey-autumn-2026"]
+    },
+    {
+      "id": "event-iclr-2027-deadline",
+      "eventType": "event_recorded",
+      "title": "ICLR 2027 截稿",
+      "summary": "给自己的 deadline：正文 + 附录定稿，留一周做实验补充。",
+      "occurredAt": "2027-09-24T23:59:00+08:00",
+      "createdAt": "2026-08-28T22:00:00+08:00",
+      "importance": "milestone",
+      "eventState": "planned",
+      "journeyIds": ["journey-vla-study"]
+    }
+  ]
+}

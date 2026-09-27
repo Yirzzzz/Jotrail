@@ -1,0 +1,822 @@
+/**
+ * Notes screen: a note index beside a centred reading/writing column
+ * (UX_SPEC.md §8). Chrome stays minimal while writing; metadata lives in the
+ * footer bar rather than in a form above the text.
+ */
+
+/*
+ * The index is narrower than it was: the shell now puts a context rail to the
+ * right of this screen (`NotesScreenRail`), so the reading column is sharing its
+ * width with two side columns rather than one.
+ */
+.notes {
+  display: grid;
+  grid-template-columns: 224px minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+}
+
+.notes__index {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--rule);
+  background: var(--binder);
+}
+
+.notes__index-head {
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  border-bottom: 1px solid var(--rule-faint);
+  flex-shrink: 0;
+}
+
+.notes__search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.4375rem 0.625rem;
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  color: var(--ink-tertiary);
+  margin-top: var(--space-3);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.notes__search:focus-within {
+  border-color: var(--violet-rule);
+  box-shadow: 0 0 0 3px var(--violet-wash);
+}
+
+.notes__search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  font-size: var(--text-meta);
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.notes__search input:focus {
+  outline: none;
+}
+
+.notes__index-list {
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-2) var(--space-2) var(--space-4);
+}
+
+.notes__index-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--space-3);
+  border-left: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.notes__index-item:hover {
+  background: var(--sunk);
+}
+
+.notes__index-item[aria-current='true'] {
+  background: var(--violet-wash);
+  border-left-color: var(--violet);
+}
+
+.notes__index-item[aria-current='true'] .notes__index-title {
+  color: var(--violet-ink);
+}
+
+.notes__index-title {
+  font-size: var(--text-meta);
+  font-weight: var(--weight-medium);
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notes__index-excerpt {
+  margin-top: 0.125rem;
+  font-size: var(--text-meta);
+  line-height: 1.45;
+  color: var(--ink-tertiary);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.notes__index-date {
+  margin-top: var(--space-1);
+  font-size: var(--text-micro);
+  color: var(--ink-tertiary);
+}
+
+.notes__index-empty {
+  padding: var(--space-4);
+  font-size: var(--text-meta);
+  color: var(--ink-tertiary);
+  line-height: 1.6;
+}
+
+/* --- editor -------------------------------------------------------------- */
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--sheet);
+}
+
+.editor__scroll {
+  flex: 1;
+  min-height: 0;
+}
+
+.editor__column {
+  max-width: var(--reading-measure);
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-6) var(--space-8);
+}
+
+/* --- the head of the note ------------------------------------------------ */
+
+/**
+ * Where the note sits. Sans and small — it is the app naming a location, not
+ * part of what the user wrote.
+ */
+.editor__breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+  font-size: var(--text-meta);
+  color: var(--ink-tertiary);
+  min-width: 0;
+}
+
+.editor__breadcrumb-root {
+  flex-shrink: 0;
+}
+
+/* The current note's own name truncates rather than wrapping the trail. */
+.editor__breadcrumb-current {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-secondary);
+}
+
+.editor__title {
+  width: 100%;
+  border: none;
+  background: none;
+  /*
+   * The display serif, like every other title in the app — a note's name is the
+   * user's own words. It stays an `input`, because this app has no read mode:
+   * the title is always editable in place.
+   */
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+  color: var(--ink);
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* The Journeys this note belongs to, under the title. */
+.editor__tags {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* A tag that navigates: same shape as a static pill, with a pointer. */
+.editor__tag {
+  cursor: pointer;
+  border: none;
+  transition: filter var(--transition-fast);
+}
+
+.editor__tag:hover {
+  filter: saturate(1.15) brightness(0.97);
+}
+
+.editor__title:focus {
+  outline: none;
+}
+
+.editor__title::placeholder {
+  color: var(--ink-tertiary);
+}
+
+.editor__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--rule-faint);
+  flex-wrap: wrap;
+}
+
+/* --- writing surface ----------------------------------------------------- */
+
+.editor__surface {
+  margin-top: var(--space-5);
+  min-height: 320px;
+}
+
+/*
+ * CodeMirror represents an intentional paragraph break as an otherwise empty
+ * line. Giving that line the full 1.75 body leading made every paragraph break
+ * almost two lines tall, so prose looked loosely scattered rather than calmly
+ * typeset. Compact it while it is at rest; when the caret enters the line it
+ * returns to normal height, preserving an easy editing target.
+ */
+.editor__surface .cm-line:has(> br:only-child):not(.cm-activeLine) {
+  min-height: 0.9rem;
+  line-height: 0.9rem;
+}
+
+.editor__surface .cm-line {
+  text-wrap: pretty;
+}
+
+/*
+ * The title input already presents this exact heading above the document. Hide the
+ * echo while reading, but reveal the original line as soon as the editor is focused
+ * on it. This changes no Markdown and preserves the same in-place editing contract
+ * as every other piece of live-preview syntax.
+ */
+.editor__surface--title-echo .cm-editor:not(.cm-focused) .cm-md-leading-title-line {
+  display: none;
+}
+
+/**
+ * Live-preview Markdown (see livePreview.ts).
+ *
+ * These rules make the editor read as finished prose while the text underneath
+ * stays plain Markdown. Sizes deliberately mirror `.prose` in global.css, so a
+ * note looks the same while writing it as it does anywhere else.
+ */
+
+/*
+ * The reading scale.
+ *
+ * Roles, and what distinguishes each: **h1** names the note, **h2** a section,
+ * **h3** a subsection, then body, list, quote, code, table. The old scale ran
+ * 1.5 / 1.25 / 1.0625 / 1rem against 1rem body — so h3 sat 0.06rem above body and
+ * h4-h6 were *identical* to it. Three of six heading levels could not be told from
+ * a paragraph, which is what made long notes read as undifferentiated text (D-057).
+ *
+ * **Size alone cannot carry this, because the content is Chinese.** CJK has no
+ * ascenders, descenders or lowercase, so a 6% size step that reads clearly in Latin
+ * is nearly invisible here. Each step therefore moves size *and* weight *and* the
+ * space above it, and h4-h6 stop competing on size at all — they take weight and
+ * colour instead.
+ */
+
+.cm-md-h1,
+.cm-md-h2,
+.cm-md-h3,
+.cm-md-h4,
+.cm-md-h5,
+.cm-md-h6 {
+  color: var(--ink);
+  /*
+   * Tighter than body, and tightest on the largest sizes: leading that suits a
+   * paragraph makes a two-line heading look like two separate lines.
+   */
+  line-height: 1.35;
+  /*
+   * CJK headings set solid look cramped; a touch of tracking opens them without
+   * affecting Latin, which is already spaced by its own sidebearings.
+   */
+  letter-spacing: 0.01em;
+}
+
+/*
+ * Headings belong to the user's record, so they use the ledger's display face.
+ * Body copy stays in the calmer sans: the face change makes section boundaries
+ * legible without spending another colour or turning every heading into a card.
+ */
+.cm-md-h1,
+.cm-md-h2,
+.cm-md-h3 {
+  font-family: var(--font-display);
+}
+
+.cm-md-h1 {
+  font-size: 1.4375rem;
+  font-weight: var(--weight-bold);
+  line-height: 1.3;
+}
+
+.cm-md-h2 {
+  font-size: 1.1875rem;
+  font-weight: var(--weight-semibold);
+}
+
+.cm-md-h3 {
+  font-size: 1.0625rem;
+  font-weight: var(--weight-semibold);
+}
+
+/*
+ * Below h3, size stops carrying the distinction — a fourth size step this close to
+ * body text would be noise. These read as labels: same size, heavier, and h5/h6
+ * step back in colour rather than down in size.
+ */
+.cm-md-h4 {
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+}
+
+.cm-md-h5,
+.cm-md-h6 {
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  color: var(--ink-secondary);
+}
+
+.cm-md-strong {
+  font-weight: var(--weight-semibold);
+  /*
+   * Semibold, not bold. The body face renders CJK bold as a heavy slab that pulls
+   * far harder than the emphasis intends, and a note like the user's marks whole
+   * phrases — `**问题**`, `**最短结论**` — so 700 turned every table header into a
+   * black band.
+   */
+  color: var(--ink);
+}
+
+.cm-md-emphasis {
+  font-style: italic;
+}
+
+.cm-md-strikethrough {
+  text-decoration: line-through;
+  text-decoration-color: var(--ink-tertiary);
+  color: var(--ink-secondary);
+}
+
+.cm-md-code {
+  font-family: var(--font-mono);
+  /*
+   * 0.875em compensates for the mono face running larger on the same em; without it
+   * inline code sits visibly taller than the prose around it.
+   */
+  font-size: 0.875em;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: var(--sunk);
+  /* Code should not be hyphenated or broken mid-identifier. */
+  white-space: nowrap;
+}
+
+.cm-md-block-code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  /* Code is scanned line by line, so it reads tighter than prose. */
+  line-height: 1.6;
+}
+
+.cm-md-quote {
+  color: var(--ink-secondary);
+  /*
+   * No italic. The user's quotes are Chinese, and synthesised oblique CJK is a
+   * mechanical slant rather than a designed italic — it degrades legibility while
+   * the left rule already says "quoted".
+   */
+  font-style: normal;
+}
+
+.cm-md-link {
+  color: var(--pen-1-ink);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+/*
+ * List markers, made to read as list markers.
+ *
+ * A raw hyphen is Markdown source, not a reading glyph. Away from the caret it
+ * becomes a compact violet dot; entering that line restores the original `-` so
+ * the syntax remains obvious and editable. Ordered markers keep their numbers.
+ */
+.cm-md-list-mark {
+  color: var(--ink-tertiary);
+  /* Tabular so ordered lists line up at `9.` and `10.`. */
+  font-variant-numeric: tabular-nums;
+}
+
+.cm-line:not(.cm-activeLine) .cm-md-bullet-mark {
+  display: inline-flex;
+  width: 0.75rem;
+  align-items: center;
+  justify-content: center;
+  font-size: 0;
+  vertical-align: middle;
+}
+
+.cm-line:not(.cm-activeLine) .cm-md-bullet-mark::after {
+  content: '';
+  width: 0.32rem;
+  height: 0.32rem;
+  border-radius: var(--radius-pill);
+  background: var(--violet);
+}
+
+.cm-md-ordered-mark {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  color: var(--violet-ink);
+}
+
+.cm-md-rule {
+  display: inline-block;
+  width: 100%;
+  height: 1px;
+  border: none;
+  background: var(--rule);
+  vertical-align: middle;
+}
+
+/*
+ * Blockquote and code blocks get a left edge, drawn per line so it survives
+ * wrapping. The `> ` characters themselves are hidden.
+ */
+.cm-line:has(.cm-md-quote) {
+  border-left: 2px solid var(--violet-rule);
+  padding-left: var(--space-4);
+  background: var(--violet-wash);
+}
+
+.cm-md-block-code-line {
+  background: var(--sunk);
+  padding-inline: var(--space-3);
+  border-left: 2px solid var(--pen-3-ink);
+}
+
+.cm-md-block-code-line .cm-md-block-code {
+  color: var(--ink-secondary);
+}
+
+.cm-md-block-code-line--start {
+  padding-top: var(--space-3);
+  border-top-right-radius: var(--radius-sm);
+}
+
+.cm-md-block-code-line--end {
+  padding-bottom: var(--space-3);
+  border-bottom-right-radius: var(--radius-sm);
+}
+
+/*
+ * A list line, indented so its text hangs off the marker.
+ *
+ * `text-indent` with a negative value plus matching padding gives a hanging indent
+ * that survives wrapping — a wrapped list item aligns under its own text rather
+ * than under the bullet, which is what makes a list scannable.
+ */
+.cm-line:has(.cm-md-list-mark) {
+  padding-left: var(--space-5);
+  text-indent: calc(-1 * var(--space-4));
+}
+
+/*
+ * Vertical rhythm.
+ *
+ * Space above a heading is what separates sections, and it scales with the level so
+ * the hierarchy is legible from the shape of the page alone. Consecutive list items
+ * are *tightened* instead, because paragraph-sized gaps between bullets made six
+ * items look like six paragraphs — the single biggest reason the user's note read as
+ * a wall of text.
+ */
+.cm-line:has(.cm-md-h1) {
+  padding-top: var(--space-7);
+}
+
+.cm-line:has(.cm-md-h2) {
+  padding-top: var(--space-6);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--rule-faint);
+}
+
+.cm-line:has(.cm-md-h3) {
+  padding-top: var(--space-5);
+}
+
+.cm-line:has(.cm-md-h4),
+.cm-line:has(.cm-md-h5),
+.cm-line:has(.cm-md-h6) {
+  padding-top: var(--space-4);
+}
+
+/* The first line of a note needs no space above it. */
+.cm-content > .cm-line:first-child {
+  padding-top: 0;
+}
+
+/* --- editor bar ---------------------------------------------------------- */
+
+.editor__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-6);
+  border-top: 1px solid var(--rule);
+  background: var(--paper);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.editor__bar-spacer {
+  flex: 1;
+}
+
+.editor__save-state {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-meta);
+  color: var(--ink-tertiary);
+}
+
+.editor__save-state--error {
+  color: var(--danger);
+}
+
+.editor__journeys {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.editor__journey-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0.1875rem 0.375rem 0.1875rem 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--pen-1-wash);
+  color: var(--pen-1-ink);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-medium);
+}
+
+.editor__journey-chip button {
+  display: grid;
+  place-items: center;
+  color: inherit;
+  opacity: 0.6;
+  transition: opacity var(--transition-fast);
+}
+
+.editor__journey-chip button:hover {
+  opacity: 1;
+}
+
+/* --- link menu ----------------------------------------------------------- */
+
+.link-menu {
+  position: relative;
+}
+
+.link-menu__panel {
+  position: absolute;
+  bottom: calc(100% + var(--space-2));
+  left: 0;
+  z-index: 20;
+  min-width: 220px;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  box-shadow: var(--shadow-overlay);
+}
+
+.link-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-meta);
+  text-align: left;
+  color: var(--ink);
+}
+
+.link-menu__item:hover {
+  background: var(--sunk);
+}
+
+.link-menu__empty {
+  padding: var(--space-3);
+  font-size: var(--text-meta);
+  color: var(--ink-tertiary);
+}
+
+/**
+ * Narrow windows: the index yields, then the drawer's width is reserved.
+ *
+ * Below 1180px the rail becomes a fixed overlay laid over the right of this
+ * screen (AppShell.css). Notes is the tightest case in the app, because it is the
+ * only screen with a column on *both* sides of the reading surface — at the
+ * minimum window an index, a writing column and a drawer were all competing for
+ * 816px, and the writing column lost: body text was clipped mid-sentence and the
+ * footer bar's controls disappeared behind the drawer.
+ *
+ * So the index goes first. It is a way of getting to a note; the note itself is
+ * the reason the screen exists, and the sidebar and ⌘K both still reach any note.
+ */
+@media (max-width: 1180px) {
+  .notes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .notes__index {
+    display: none;
+  }
+
+  /*
+   * `padding-right` specifically, never the `padding` shorthand — a shorthand
+   * silently resets this reservation, which is how the same bug survived a fix
+   * on the Timeline screen.
+   */
+  .editor__column {
+    padding-left: var(--space-5);
+    padding-right: calc(var(--rail-width) + var(--space-5));
+    margin: 0;
+  }
+
+  /* The footer bar has to clear the drawer too, or its controls sit under it. */
+  .editor__bar {
+    padding-right: calc(var(--rail-width) + var(--space-4));
+  }
+}
+
+/* --- GFM tables in the editor -------------------------------------------- */
+
+/**
+ * A table in the live-preview editor.
+ *
+ * The pipes stay visible on purpose — they are the column boundaries, and the
+ * user needs them to edit and align the columns. What changes is their weight:
+ * the delimiters recede to a hairline colour and the cell contents come forward,
+ * so the shape reads as a table without the markup being removed.
+ *
+ * Mono for the whole block, because that is what makes columns of `|` line up
+ * vertically at all. A proportional face turns an aligned source table into a
+ * ragged one, which is worse than plain text.
+ */
+.cm-md-table {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+.cm-md-table-delimiter {
+  color: var(--rule-strong);
+}
+
+.cm-md-table-header .cm-md-table-cell {
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+}
+
+.cm-md-table-cell {
+  color: var(--ink);
+}
+
+/* The header's own `| --- |` row is structure, not content: quieten it whole. */
+.cm-line:has(.cm-md-table-header) + .cm-line .cm-md-table-delimiter {
+  color: var(--rule);
+}
+
+/* --- maths ---------------------------------------------------------------- */
+
+/*
+ * Rendered LaTeX, replacing its source while the cursor is elsewhere (D-053).
+ *
+ * KaTeX ships its own stylesheet, which owns the internal layout. These rules only
+ * place the result inside the note: colour inherited from the reading ink so a
+ * formula belongs to the prose rather than looking pasted in, and the size left
+ * alone because KaTeX sizes relative to its container.
+ */
+.cm-md-math {
+  color: var(--ink);
+}
+
+/* A display formula stands alone, centred, with room to breathe. */
+.cm-md-math--display {
+  display: block;
+  margin: var(--space-4) 0;
+  padding: var(--space-4);
+  border: 1px solid var(--rule-faint);
+  border-radius: var(--radius-md);
+  background: var(--sunk);
+  text-align: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/*
+ * A formula KaTeX could not parse. It keeps the source visible rather than
+ * showing nothing — a half-typed formula is the normal state of one being written.
+ */
+.cm-md-math--failed,
+.cm-md-math .katex-error {
+  color: var(--negative-ink, var(--ink-secondary));
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+/*
+ * The LaTeX source, while the cursor is on it. Monospaced and quietened, so it is
+ * obviously the raw form of the formula above rather than prose.
+ */
+.cm-md-math-source {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  color: var(--pen-3-ink);
+}
+
+/* --- tables, drawn as tables --------------------------------------------- */
+
+/*
+ * A real `<table>`, replacing the Markdown source while the cursor is elsewhere
+ * (D-055). Styled to match `.prose table` in `global.css` so a table reads the same
+ * wherever it appears, and quiet: rules rather than fills, per `UX_SPEC.md` §7.
+ */
+.cm-md-table-rendered {
+  margin: var(--space-4) 0;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-subtle);
+  overflow-x: auto;
+}
+
+.cm-md-table-rendered table {
+  width: 100%;
+  border-collapse: collapse;
+  /* Tabular content is denser than prose, so it reads a step smaller. */
+  font-size: 0.94em;
+  line-height: 1.6;
+}
+
+.cm-md-table-rendered th,
+.cm-md-table-rendered td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  vertical-align: top;
+}
+
+/*
+ * The header is separated by a firmer rule rather than a filled band — a shaded
+ * header row is the "enterprise-management aesthetic" `AGENTS.md` §7 rules out.
+ */
+.cm-md-table-rendered thead th {
+  border-bottom: 1.5px solid var(--ink-tertiary);
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.cm-md-table-rendered tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Inline code and maths inside a cell keep their own treatment. */
+.cm-md-table-rendered code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  color: var(--pen-3-ink);
+}
+
+/* A table too malformed to draw falls back to its source rather than vanishing. */
+.cm-md-table-rendered--failed {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  white-space: pre-wrap;
+  color: var(--ink-secondary);
+}

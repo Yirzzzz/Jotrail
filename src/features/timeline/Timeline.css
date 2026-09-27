@@ -1,0 +1,937 @@
+/**
+ * One reading rhythm for both timeline scopes: month, date, continuous rail,
+ * then the record. Ordinary entries sit on the page; milestones and plans keep
+ * their bounded surfaces. Geometry is shared so dots never drift into dates.
+ */
+
+/* --- the screen ---------------------------------------------------------- */
+
+/**
+ * Match the Journey reading column's measure and inset in both timeline scopes.
+ */
+.timeline-screen {
+  padding: var(--space-6);
+  max-width: 940px;
+}
+
+/**
+ * Narrow windows: reserve the drawer's width.
+ *
+ * Below 1180px the rail becomes a fixed overlay (AppShell.css) laid over the
+ * right of this column. Without room set aside for it, entry cards ran
+ * underneath: the type badge and the right edge of every card were cut off, and
+ * a reflection clipped mid-sentence. The column now ends where the drawer
+ * begins, so a card is narrower but whole.
+ *
+ * Both breakpoints set `padding-right` specifically, never the `padding`
+ * shorthand — a shorthand here silently resets this reservation, which is
+ * exactly the bug this comment used to describe as unfixable.
+ *
+ * The shell's existing no-rail class removes the reservation when the drawer is
+ * closed. No UI state needs to be copied into the timeline component.
+ */
+@media (max-width: 1180px) {
+  .timeline-screen {
+    padding-right: calc(var(--rail-width) + var(--space-6));
+  }
+
+  .shell--no-rail .timeline-screen {
+    padding-right: var(--space-6);
+  }
+}
+
+/*
+ * At the app's minimum window the column is tight, so it gives back the outer
+ * padding — but keeps the drawer's reservation, at a smaller gutter.
+ */
+@media (max-width: 900px) {
+  .timeline-screen {
+    padding-top: var(--space-5);
+    padding-bottom: var(--space-5);
+    padding-left: var(--space-5);
+    padding-right: calc(var(--rail-width) + var(--space-5));
+  }
+
+  .shell--no-rail .timeline-screen {
+    padding-right: var(--space-5);
+  }
+}
+
+.timeline-screen__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+  flex-wrap: wrap;
+}
+
+/* A screen title, in the display serif like every other title in the app. */
+.timeline-screen__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-page);
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+  color: var(--ink);
+}
+
+.timeline {
+  --timeline-date-column: 2.75rem;
+  --timeline-rail-gap: 1.25rem;
+  --timeline-entry-inset: 1.25rem;
+  --timeline-day-gap: var(--space-5);
+  --dot-size: 7px;
+  --line-x: calc(var(--timeline-date-column) + var(--timeline-rail-gap));
+}
+
+.timeline__month + .timeline__month {
+  margin-top: var(--space-6);
+}
+
+.timeline__month-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-3);
+}
+
+.timeline__month-heading .section-label {
+  color: var(--ink-secondary);
+}
+
+.timeline__month-rule {
+  flex: 1;
+  height: 1px;
+  background: var(--rule);
+}
+
+/* Two columns: the date rail, then the day's entries. */
+.timeline__day {
+  display: grid;
+  grid-template-columns: var(--timeline-date-column) minmax(0, 1fr);
+  column-gap: var(--timeline-rail-gap);
+  position: relative;
+}
+
+.timeline__day + .timeline__day {
+  margin-top: var(--timeline-day-gap);
+}
+
+/*
+ * The channel line, running the height of the day behind the marks. A plain
+ * hairline in the instrument's ink: it is structure, not a highlight.
+ */
+.timeline__day::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: calc(-1 * var(--timeline-day-gap));
+  left: var(--line-x);
+  width: 1px;
+  background: var(--rule);
+}
+
+.timeline__day:last-child::before {
+  /* Each month has one continuous rail, without a tail into the next heading. */
+  bottom: var(--space-3);
+}
+
+.timeline__date {
+  text-align: right;
+  padding-top: var(--space-3);
+  position: sticky;
+  top: var(--space-4);
+  align-self: start;
+}
+
+/* The date is the page's own scale marking: display face, tabular figures. */
+.timeline__date-day {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: var(--weight-bold);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline__date-weekday {
+  font-family: var(--font-sans);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-tertiary);
+  margin-top: 0.1875rem;
+}
+
+.timeline__date-month {
+  font-family: var(--font-sans);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-tertiary);
+  margin-bottom: 0.1875rem;
+}
+
+.timeline__entries {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  /*
+   * The pips straddle the channel line on this column's leading edge, so the
+   * column must not clip them. `min-width: 0` above is what allows the grid
+   * track to shrink; it does not imply hidden overflow, but being explicit here
+   * documents that the overhang is intentional.
+   */
+  overflow: visible;
+}
+
+/* --- entries ------------------------------------------------------------- */
+
+.entry {
+  --entry-marker-y: 1.5rem;
+  position: relative;
+  padding-left: var(--timeline-entry-inset);
+  text-align: left;
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  scroll-margin-top: 72px;
+}
+
+.entry + .entry {
+  margin-top: var(--space-2);
+}
+
+/**
+ * The pip on the channel line — the same mark the trace uses for an event, so
+ * the drawing above and the text below share one vocabulary.
+ *
+ * The ring around it is the paper colour, not white, because these sit directly
+ * on the paper rather than on a pane — a white halo would show as a bright disc
+ * on the ground. (It used to be justified by the grid it would have punched a
+ * hole in; the grid is gone since D-033, the ring is still right.)
+ */
+.entry::before {
+  content: '';
+  position: absolute;
+  /* The entry's leading edge IS the rail, not its padded content edge. */
+  left: 0.5px;
+  top: var(--entry-marker-y);
+  width: var(--dot-size);
+  height: var(--dot-size);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--rule-strong);
+  box-shadow: 0 0 0 3px var(--paper);
+  transition: background var(--transition-fast);
+}
+
+/* Pips align with the first line; every density uses the same horizontal anchor. */
+.entry--normal::before,
+.entry--tasks::before {
+  background: var(--rule-strong);
+  border: none;
+}
+
+/*
+ * A milestone is marked by *shape* as well as size: a ring around a filled pip,
+ * matching `trace__pip-ring`. Legible with no colour at all.
+ */
+.entry--milestone {
+  --dot-size: 9px;
+  --entry-marker-y: 1.8125rem;
+}
+
+.entry--milestone::before {
+  background: var(--stylus);
+  border: none;
+  box-shadow:
+    0 0 0 2px var(--paper),
+    0 0 0 3.5px var(--stylus);
+}
+
+/* --- the card ------------------------------------------------------------ */
+
+/**
+ * An ordinary record is part of the page, not another box. Transparent borders
+ * reserve the same inset as a milestone or plan, so their text still aligns.
+ */
+.entry__surface {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+button.entry:hover .entry__surface,
+button.entry:focus-visible .entry__surface {
+  background: var(--sunk);
+}
+
+/**
+ * An entry filed onto a tracked thing takes its stage's colour on the left edge.
+ *
+ * A 2px edge rather than the whole border: the card's frame is structure and
+ * belongs to the timeline, while the stage is one fact about this entry. Colouring
+ * all four sides would turn a page of staged entries into the rainbow of category
+ * colours UX_SPEC.md §7 rules out, and would compete with the dashed border a
+ * plan uses.
+ *
+ * `--stage-ink` is set on `.entry` by TimelineEntryView. Never the only signal:
+ * the stage's name is always rendered as a chip beside the title.
+ */
+.entry--staged .entry__surface {
+  border-left: 2px solid var(--stage-ink);
+  /* Keeps the text aligned with unstaged entries despite the thicker edge. */
+  padding-left: calc(var(--space-4) - 1px);
+}
+
+/*
+ * A plan's dashed edge wins: "this has not happened yet" is a stronger fact about
+ * an entry than which stage it is aimed at, and two competing left borders would
+ * make neither legible.
+ */
+.entry--planned.entry--staged .entry__surface {
+  border-left-style: dashed;
+}
+
+/* The chip is the event's kind, in neutral ink — the channel is named in a tag. */
+.entry__chip {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-tertiary);
+}
+
+.entry__main {
+  min-width: 0;
+}
+
+/* Type is metadata below the title, alongside the date and any explicit stage. */
+.entry__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0.0625rem 0.375rem;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-tertiary);
+  font-family: var(--font-sans);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* The card carries the hover state, so the row itself needs no background. */
+button.entry {
+  cursor: pointer;
+  display: block;
+}
+
+.entry__head {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+}
+
+.entry__meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.entry__meta > .stage-chip {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * The edit affordance.
+ *
+ * The title gets the reading width; the small action stays at its trailing edge.
+ *
+ * Quiet until wanted: correcting an event is a rare act, and a pencil on every
+ * card would compete with the entry itself. Focus brings it back for keyboard
+ * users, and it stays visible where there is no hover to reveal it.
+ */
+.entry__edit {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  margin-left: auto;
+  opacity: 0;
+  transition:
+    opacity var(--transition-fast),
+    background var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.entry:hover .entry__edit,
+.entry__edit:focus-visible {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .entry__edit {
+    opacity: 1;
+  }
+}
+
+/* A timestamp is measured, so it is a readout. */
+.entry__time {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  color: var(--ink-tertiary);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.entry__title {
+  flex: 1 1 12ch;
+  font-family: var(--font-display);
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+  min-width: 0;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.entry__summary {
+  margin-top: var(--space-2);
+  font-size: var(--text-meta);
+  color: var(--ink-secondary);
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.entry__journeys {
+  display: flex;
+  gap: var(--space-1) var(--space-2);
+  margin-top: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.entry__journeys .pill {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.entry__journeys .pill svg {
+  flex-shrink: 0;
+}
+
+/* --- compact: a single scannable line ------------------------------------ */
+
+/* Compact rows keep the bare-line treatment and their own hover. */
+.entry--compact {
+  --entry-marker-y: 1.125rem;
+  border-radius: var(--radius-sm);
+  padding-block: var(--space-2);
+}
+
+button.entry--compact:hover {
+  background: var(--sunk);
+}
+
+.entry--compact .entry__head {
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: var(--space-3);
+}
+
+.entry--compact .entry__title {
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  font-weight: var(--weight-regular);
+  color: var(--ink-secondary);
+}
+
+.entry--compact .entry__icon {
+  color: var(--success);
+  display: inline-grid;
+  place-items: center;
+  transform: translateY(2px);
+}
+
+.entry--compact.entry--reopened .entry__icon {
+  color: var(--ink-tertiary);
+}
+
+/* --- milestone: more room, and a full-scale deflection ------------------- */
+
+/**
+ * A milestone is the one entry that reaches full scale on the trace, so on the
+ * sheet it is the one that gets the pen's own gradient as a top cap. Weight and
+ * room do the rest; the ground stays white so the text is on flat paper.
+ */
+.entry--milestone .entry__surface {
+  position: relative;
+  overflow: hidden;
+  padding: var(--space-4);
+  background: var(--sheet);
+  border: 1px solid var(--rule-strong);
+}
+
+.entry--milestone .entry__surface::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  /* This channel's pen, set on `.entry` by TimelineEntryView. */
+  background: linear-gradient(
+    90deg,
+    var(--pen-from, var(--pen-1-from)),
+    var(--pen-to, var(--pen-1-to))
+  );
+}
+
+.entry--milestone .entry__chip {
+  background: var(--pen-wash, var(--pen-1-wash));
+  color: var(--pen-ink, var(--pen-1-ink));
+}
+
+.entry--milestone .entry__badge {
+  background: var(--pen-wash, var(--pen-1-wash));
+  color: var(--pen-ink, var(--pen-1-ink));
+}
+
+.entry--milestone .entry__title {
+  font-family: var(--font-display);
+  font-size: var(--text-section);
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.02em;
+}
+
+/**
+ * The current turning point gets a quiet tint and an accented marker. Its
+ * outline stays as restrained as the other entries so the rail remains primary.
+ */
+.entry--latest .entry__surface {
+  border-color: var(--violet-rule);
+  background: var(--violet-wash);
+}
+
+.entry--latest {
+  --dot-size: 9px;
+}
+
+.entry--latest::before {
+  border: 0;
+  border-radius: 50%;
+  background: var(--stylus);
+  box-shadow:
+    0 0 0 2px var(--paper),
+    0 0 0 3.5px var(--stylus);
+}
+
+/* --- planned: a commitment, not yet a record ----------------------------- */
+
+/**
+ * A plan is drawn as an *unfinished* entry rather than a differently-coloured
+ * one: the border goes dashed, which is the same convention a drawing uses for
+ * a line that is proposed rather than built. It reads as "not yet" at a glance,
+ * survives greyscale, and needs no legend.
+ *
+ * Placed after the milestone rules on purpose. A planned milestone should look
+ * planned first — the weight it will carry once confirmed is the less urgent
+ * fact — so these override the milestone's solid edge and gradient cap.
+ */
+.entry--planned .entry__surface {
+  border-style: dashed;
+  border-color: var(--violet-rule);
+  /* The wash is a hint of the app's own violet: this is yours, and it is live. */
+  background:
+    linear-gradient(0deg, var(--violet-wash) 0%, var(--violet-wash) 100%), var(--sheet);
+}
+
+/* The gradient cap belongs to something achieved; a plan has not earned it. */
+.entry--planned.entry--milestone .entry__surface::before {
+  display: none;
+}
+
+.entry--planned .entry__chip {
+  background: var(--violet-fill);
+  color: var(--violet-ink);
+}
+
+.entry--planned .entry__badge {
+  background: var(--violet-fill);
+  color: var(--violet-ink);
+}
+
+/*
+ * A hollow pip: the pen has not written here yet. Shape carries the state on the
+ * channel line exactly as the dashed border carries it on the card, so neither
+ * depends on colour.
+ */
+.entry--planned {
+  --dot-size: 9px;
+}
+
+.entry--planned::before {
+  background: var(--paper);
+  box-shadow:
+    0 0 0 2px var(--paper),
+    inset 0 0 0 1.5px var(--violet);
+}
+
+/**
+ * Overdue: the date came and went and nothing was recorded.
+ *
+ * The one case that justifies a warning colour anywhere on the timeline — it is
+ * not decoration but the single state the user needs to notice. "Overdue" in the
+ * badge says the same thing in words.
+ */
+.entry--overdue .entry__surface {
+  border-color: var(--warning);
+  background:
+    linear-gradient(0deg, var(--warning-wash) 0%, var(--warning-wash) 100%), var(--sheet);
+}
+
+.entry--overdue .entry__chip,
+.entry--overdue .entry__badge {
+  background: var(--warning-wash);
+  color: var(--warning);
+}
+
+.entry--overdue::before {
+  box-shadow:
+    0 0 0 2px var(--paper),
+    inset 0 0 0 1.5px var(--warning);
+}
+
+/* The plan's own date line: the date spelled out, then how far off it is. */
+.entry__plan {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-top: 0.125rem;
+  flex-wrap: wrap;
+}
+
+.entry__plan-date {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  color: var(--ink-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The countdown is the emphasis: "In 12 days" is the useful half. */
+.entry__plan-countdown {
+  font-family: var(--font-sans);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--violet-ink);
+}
+
+.entry--overdue .entry__plan-countdown {
+  color: var(--warning);
+}
+
+/*
+ * "Planned for 12 Sep" on an entry that has since happened. Quiet: it is
+ * context for the date above it, not a competing fact.
+ */
+.entry__plan-met {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  font-size: var(--text-micro);
+  color: var(--ink-tertiary);
+}
+
+/* The confirm action sits at the foot of the card, above the journey tags. */
+.entry__plan-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* --- state transition ---------------------------------------------------- */
+
+.entry__transition {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  font-size: var(--text-meta);
+  color: var(--ink-secondary);
+}
+
+.entry__transition > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.entry__transition > svg {
+  flex-shrink: 0;
+}
+
+.entry__transition-from {
+  /* The superseded value stays legible: history is not greyed out to nothing. */
+  color: var(--ink-tertiary);
+  text-decoration: line-through;
+  text-decoration-color: var(--rule-strong);
+}
+
+.entry__transition-to {
+  font-weight: var(--weight-medium);
+  color: var(--ink);
+}
+
+.entry__transition-field {
+  font-family: var(--font-sans);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-tertiary);
+}
+
+/* --- reflection: the user's own voice, visually distinct ----------------- */
+
+/*
+ * A reflection stays inside the record's reading flow, with a marginal rule
+ * rather than another nested card.
+ */
+.entry__reflection {
+  margin-top: var(--space-3);
+  padding: var(--space-1) 0 var(--space-1) var(--space-3);
+  border-left: 2px solid var(--rule-strong);
+}
+
+.entry__reflection-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-family: var(--font-sans);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-tertiary);
+  margin-bottom: var(--space-1);
+}
+
+.entry__reflection-body {
+  font-size: var(--text-meta);
+  line-height: 1.65;
+  color: var(--ink);
+}
+
+/* --- grouped compact runs ------------------------------------------------ */
+
+/* Consecutive compact events tighten up instead of each taking full spacing. */
+.entry--compact + .entry--compact {
+  margin-top: var(--space-2);
+}
+
+/* --- task group ---------------------------------------------------------- */
+
+/* One pip for the whole group: the day's tasks are one moment, not several. */
+.entry--tasks::before {
+  background: var(--paper);
+  box-shadow:
+    0 0 0 2px var(--paper),
+    inset 0 0 0 1.5px var(--stylus);
+}
+
+/**
+ * Routine tasks share the same paper and text inset as ordinary records. One
+ * light divider is enough to group them without another shaded card.
+ */
+.task-group__surface {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+}
+
+.task-group__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--rule);
+}
+
+.task-group__label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.task-group__label > svg {
+  width: 24px;
+}
+
+.task-group {
+  margin-top: var(--space-2);
+  display: flex;
+  flex-direction: column;
+}
+
+.task-group__row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: 0.1875rem 0;
+  font-size: var(--text-meta);
+}
+
+.task-group__icon {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  color: var(--ink-tertiary);
+  flex-shrink: 0;
+  transform: translateY(2px);
+}
+
+.task-group__row--done .task-group__icon {
+  color: var(--success);
+}
+
+.task-group__title {
+  flex: 1;
+  min-width: 0;
+  color: var(--ink-secondary);
+  overflow-wrap: anywhere;
+}
+
+.task-group__row--done .task-group__title {
+  color: var(--ink);
+}
+
+.task-group__time {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  color: var(--ink-tertiary);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1100px) {
+  .timeline {
+    --timeline-date-column: 2rem;
+    --timeline-rail-gap: var(--space-3);
+    --timeline-entry-inset: var(--space-3);
+  }
+
+  .timeline__date-day {
+    font-size: 1.25rem;
+  }
+}
+
+/* --- work an event revealed ---------------------------------------------- */
+
+/**
+ * The tasks an event produced, inside that event's card.
+ *
+ * Like a reflection, these belong to the same record. A top rule separates
+ * them without boxing the event's contents into more surfaces.
+ */
+.entry__revealed {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--rule);
+}
+
+.entry__revealed-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-family: var(--font-sans);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-tertiary);
+  margin-bottom: var(--space-2);
+}
+
+.entry__revealed-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.entry__revealed-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: var(--text-meta);
+}
+
+.entry__revealed-mark {
+  display: inline-grid;
+  place-items: center;
+  color: var(--ink-tertiary);
+  flex-shrink: 0;
+  /* Optically aligned with the first line's x-height, not its box. */
+  transform: translateY(2px);
+}
+
+.entry__revealed-row--done .entry__revealed-mark {
+  color: var(--success);
+}
+
+.entry__revealed-title {
+  min-width: 0;
+  color: var(--ink);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * A finished item stays legible rather than fading out: it is evidence that the
+ * gap was closed, which is the more interesting half of the record.
+ */
+.entry__revealed-row--done .entry__revealed-title {
+  color: var(--ink-secondary);
+  text-decoration: line-through;
+  text-decoration-color: var(--rule-strong);
+}
+
+.edit-event__plan-action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-4);
+}

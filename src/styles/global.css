@@ -1,0 +1,763 @@
+/*
+ * Self-hosted variable faces, bundled by Vite. Imported before the tokens so
+ * the `@font-face` rules are registered by the time anything resolves
+ * `--font-display`. No network on the critical path (PRODUCT.md).
+ */
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/jetbrains-mono';
+@import '@fontsource-variable/source-serif-4';
+@import './fonts.css';
+@import './tokens.css';
+
+/* --- reset ---------------------------------------------------------------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: 1.55;
+  color: var(--ink);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/**
+ * The sheet.
+ *
+ * The paper is plain (D-033). It carries only a very wide two-stop wash, which
+ * is the "background carries the large gradient" half of the pinned reference and
+ * keeps the ground from reading as flat grey.
+ *
+ * It does **not** carry a ruled grid. An earlier version ruled the entire
+ * viewport at an 8px and 48px pitch, on the theory that chart paper is ruled —
+ * but a division only means something where it measures something, and behind
+ * Notes or Settings there is no axis for it to divide. It read as graph-paper
+ * stationery: texture pretending to be structure. Ruling now lives inside a
+ * chart lane, drawn against that lane's real hour axis (`--axis-rule`).
+ *
+ * `background-attachment: fixed` keeps the wash still while content scrolls: it
+ * belongs to the instrument, not to the text passing over it.
+ */
+body {
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(115% 78% at 12% -8%, rgba(147, 51, 234, 0.05), transparent 62%),
+    radial-gradient(96% 70% at 92% 4%, rgba(37, 99, 235, 0.045), transparent 58%);
+  background-attachment: fixed;
+}
+
+/* The desktop shell is not a document; only intended regions scroll. */
+body {
+  overflow: hidden;
+  /* Text selection is for content, not for chrome. */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input,
+textarea,
+button,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+ul,
+ol {
+  list-style: none;
+  padding: 0;
+}
+
+a {
+  color: var(--pen-1-ink);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  text-decoration-thickness: 1px;
+}
+
+/*
+ * Browser surfaces the design still owns: selection, caret and scrollbar all
+ * ship defaults that belong to no design system.
+ */
+::selection {
+  background: var(--selection);
+  color: var(--ink);
+}
+
+/* The caret is the pen, so it carries the pen's colour. */
+input,
+textarea,
+[contenteditable] {
+  caret-color: var(--pen-1-ink);
+}
+
+/* --- focus --------------------------------------------------------------- */
+
+/**
+ * Focus is a pen registration mark: a square ring in the instrument's own ink,
+ * offset so it reads on both the sheet and a sunk well.
+ */
+:focus-visible {
+  outline: 2px solid var(--pen-1-ink);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* --- scrollbars ---------------------------------------------------------- */
+
+.scroll-area {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule-strong) transparent;
+}
+
+.scroll-area::-webkit-scrollbar {
+  width: 10px;
+}
+
+.scroll-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll-area::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: var(--radius-pill);
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+/* Scrollbars appear on approach rather than sitting there permanently. */
+.scroll-area:hover::-webkit-scrollbar-thumb {
+  background: var(--rule-strong);
+  background-clip: content-box;
+}
+
+/* --- shared primitives --------------------------------------------------- */
+
+/**
+ * The structural label — a small caps-height marker naming a region: SHEET,
+ * UP NEXT, ACTIVE JOURNEYS, TAGS.
+ *
+ * Sans, not the display serif. The serif is reserved for what the *user* wrote
+ * (dates, titles, headings); a label is the app talking about its own layout, so
+ * it belongs to the interface voice. Wide tracking does the work that Archivo's
+ * width axis used to — at 11px uppercase, tracking is what makes caps legible
+ * rather than cramped.
+ */
+.section-label {
+  font-family: var(--font-sans);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-tertiary);
+}
+
+/**
+ * A readout: anything the instrument measured rather than anything a person
+ * wrote. Timestamps, counts, channel designations. Mono earns its place here
+ * because these are figures that must align in a column, not because mono
+ * looks technical.
+ */
+.readout {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: var(--ink-tertiary);
+}
+
+.meta-text {
+  font-size: var(--text-meta);
+  color: var(--ink-secondary);
+}
+
+/**
+ * A pane laid on the sheet.
+ *
+ * Near-solid on purpose: the paper below already carries the wash and the rules,
+ * so a pane's job is to give text an even ground. The 1px rule does the
+ * separating; the shadow only lifts it off the paper.
+ */
+.pane {
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-subtle);
+}
+
+/**
+ * A pane that belongs to a channel. The pen shows as a 2px cap along the top
+ * edge — the recorder's channel tab — never as a thick left border, and never
+ * as the only way to tell channels apart: the title and icon are always there.
+ */
+.pane--channel {
+  position: relative;
+  overflow: hidden;
+}
+
+.pane--channel::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: linear-gradient(90deg, var(--pen-from), var(--pen-to));
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.4375rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-meta);
+  font-weight: var(--weight-medium);
+  color: var(--ink-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast),
+    border-color var(--transition-fast);
+  white-space: nowrap;
+}
+
+.button:hover {
+  background: var(--sunk);
+  color: var(--ink);
+}
+
+.button--outline {
+  border-color: var(--rule-strong);
+  background: var(--sheet);
+}
+
+.button--outline:hover {
+  border-color: var(--ink-tertiary);
+  background: var(--sheet);
+}
+
+.button--primary {
+  /* The one filled control: the instrument's ink, so it reads as a hard key. */
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+
+.button--primary:hover {
+  background: #000;
+  color: #fff;
+}
+
+/**
+ * The recorder's own action: writing to the sheet. Carries the pen gradient,
+ * which is the one place a gradient fills a control — and the label on it is
+ * flat white, never gradient text.
+ */
+.button--pen {
+  background: linear-gradient(
+    100deg,
+    var(--pen-from, var(--pen-1-from)),
+    var(--pen-to, var(--pen-1-to))
+  );
+  color: #fff;
+  border-color: transparent;
+}
+
+.button--pen:hover {
+  background: linear-gradient(
+    100deg,
+    var(--pen-from, var(--pen-1-from)),
+    var(--pen-to, var(--pen-1-to))
+  );
+  color: #fff;
+  /* Pressing the pen down: a touch more ink, not a size change. */
+  filter: saturate(1.12) brightness(0.96);
+}
+
+.button--pen:disabled:hover {
+  filter: none;
+}
+
+.button--danger:hover {
+  background: var(--danger-wash);
+  color: var(--danger);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.button:disabled:hover {
+  background: transparent;
+  color: var(--ink-secondary);
+}
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  color: var(--ink-tertiary);
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.icon-button:hover {
+  background: var(--sunk);
+  color: var(--ink);
+}
+
+.input {
+  width: 100%;
+  padding: 0.5rem 0.6875rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  background: var(--sheet);
+  font-size: var(--text-body);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.input::placeholder {
+  color: var(--ink-tertiary);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--pen-1-ink);
+  box-shadow:
+    0 1px 2px rgba(20, 22, 26, 0.04),
+    0 0 0 3px var(--pen-1-wash);
+}
+
+.input--textarea {
+  resize: vertical;
+  min-height: 72px;
+  line-height: 1.6;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.field__label {
+  font-size: var(--text-meta);
+  font-weight: var(--weight-medium);
+  color: var(--ink-secondary);
+}
+
+.field__hint {
+  font-size: var(--text-meta);
+  color: var(--ink-tertiary);
+}
+
+/**
+ * A disclosure: a question that folds a whole optional section away.
+ *
+ * Styled as a quiet row rather than a button, because it is a heading that happens
+ * to be clickable. Button chrome would make "does this Journey track a set of
+ * things?" look like an action to take rather than a question to ignore — and the
+ * point of folding it is that most users should ignore it (AGENTS.md §1: writing
+ * must stay easier than data entry).
+ */
+.disclosure {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) 0;
+  border: 0;
+  background: none;
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+  font-weight: var(--weight-medium);
+  color: var(--ink-secondary);
+  text-align: left;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.disclosure:hover {
+  color: var(--ink);
+}
+
+/*
+ * What a disclosure reveals. Indented behind a rule on its left edge, so the
+ * fields inside read as belonging to the question above rather than as more of the
+ * form they interrupt.
+ */
+.disclosure__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-2);
+  padding-left: var(--space-4);
+  border-left: 1px solid var(--rule);
+}
+
+/* Content is selectable; chrome is not. */
+.selectable {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/**
+ * A tag on the sheet. Square, like everything the instrument prints; the pill
+ * radius belonged to the previous world.
+ */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0.1875rem 0.4375rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-medium);
+  letter-spacing: 0.02em;
+  background: var(--sunk);
+  color: var(--ink-secondary);
+  white-space: nowrap;
+}
+
+/* A channel's own tag: its wash, its deep ink, a hairline in its hue. */
+.pill--channel {
+  background: var(--pen-wash, var(--pen-1-wash));
+  color: var(--pen-ink, var(--pen-1-ink));
+  box-shadow: inset 0 0 0 1px var(--pen-wash, var(--pen-1-wash));
+}
+
+.pill--accent {
+  background: var(--pen-1-wash);
+  color: var(--pen-1-ink);
+}
+
+.pill--warm {
+  background: var(--pen-3-wash);
+  color: var(--pen-3-ink);
+}
+
+.pill--quiet {
+  background: transparent;
+  color: var(--ink-tertiary);
+  padding-inline: 0;
+}
+
+.divider {
+  height: 1px;
+  background: var(--rule);
+  border: none;
+}
+
+.empty-state {
+  padding: var(--space-6) 0;
+  max-width: 44ch;
+  color: var(--ink-secondary);
+  font-size: var(--text-body);
+  line-height: 1.65;
+}
+
+.empty-state__title {
+  font-size: var(--text-title);
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+  margin-bottom: var(--space-2);
+}
+
+.empty-state__actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.error-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--danger-wash);
+  color: var(--danger);
+  font-size: var(--text-meta);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --- rendered markdown --------------------------------------------------- */
+
+.prose {
+  font-size: var(--text-reading);
+  line-height: 1.75;
+  color: var(--ink);
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.prose > * + * {
+  margin-top: var(--space-4);
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4 {
+  line-height: 1.3;
+  font-weight: var(--weight-semibold);
+}
+
+.prose h1 {
+  font-size: 1.5rem;
+}
+
+.prose h2 {
+  font-size: 1.25rem;
+}
+
+.prose h3 {
+  font-size: 1.0625rem;
+}
+
+.prose > * + h1,
+.prose > * + h2,
+.prose > * + h3 {
+  margin-top: var(--space-6);
+}
+
+.prose ul,
+.prose ol {
+  padding-left: 1.375rem;
+}
+
+.prose ul {
+  list-style: disc;
+}
+
+.prose ol {
+  list-style: decimal;
+}
+
+.prose li + li {
+  margin-top: var(--space-1);
+}
+
+.prose li::marker {
+  color: var(--ink-tertiary);
+}
+
+.prose blockquote {
+  padding-left: var(--space-4);
+  border-left: 2px solid var(--rule-strong);
+  color: var(--ink-secondary);
+  font-style: italic;
+}
+
+.prose code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  padding: 0.125em 0.375em;
+  border-radius: 4px;
+  background: var(--sunk);
+}
+
+.prose pre {
+  padding: var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--sunk);
+  overflow-x: auto;
+}
+
+.prose pre code {
+  padding: 0;
+  background: none;
+}
+
+.prose hr {
+  height: 1px;
+  background: var(--rule);
+  border: none;
+  margin-block: var(--space-6);
+}
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-body);
+  display: block;
+  overflow-x: auto;
+}
+
+.prose th,
+.prose td {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--rule);
+  text-align: left;
+}
+
+.prose th {
+  background: var(--sunk);
+  font-weight: var(--weight-semibold);
+}
+
+.prose img {
+  max-width: 100%;
+  border-radius: var(--radius-sm);
+}
+
+.prose a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* --- display type -------------------------------------------------------- */
+
+/**
+ * The date stamp: the page's one piece of display type, and the whole reason
+ * a display face is bundled.
+ *
+ * Set in Source Serif 4 at bold. A serif at display size needs *less* negative
+ * tracking than a grotesque did — the serifs already bridge the gaps between
+ * letters, so pulling tighter than about -0.02em starts colliding them. The old
+ * -0.035em was tuned for Archivo's flat sidebearings and is wrong here.
+ */
+.stamp {
+  font-family: var(--font-display);
+  font-size: var(--text-stamp);
+  font-weight: var(--weight-bold);
+  line-height: 1.04;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  /* Figures in a date must not shift width as the day ticks over. */
+  font-variant-numeric: tabular-nums;
+  text-wrap: balance;
+}
+
+/* The stamp's own subtitle: the weekday and the sheet it belongs to. */
+.stamp__caption {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.title-display {
+  font-family: var(--font-display);
+  font-size: var(--text-hero);
+  font-weight: var(--weight-bold);
+  line-height: 1.14;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+/* --- the trace ----------------------------------------------------------- */
+
+/**
+ * The lane the pen draws in.
+ *
+ * `width: 100%` in CSS is what the component measures; the `width` attribute it
+ * then sets is only a hint for the intrinsic size, and this rule outranks it.
+ * Both agree, so there is no fight — but the order matters if either changes.
+ */
+.trace {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+
+/* The pen's own line weight, so it is a token rather than a magic number. */
+.trace__line {
+  stroke-width: var(--trace-weight);
+}
+
+/* Pips sit on the peak, so they must not be clipped by the viewBox edge. */
+.trace__pip {
+  transition: r var(--transition-fast);
+}
+
+.trace__pip-group:hover .trace__pip {
+  r: 3.5;
+}
+
+/**
+ * The stylus tip. It breathes, because a recorder's pen is in contact with
+ * moving paper and a static dot reads as a stopped instrument. Slow and small:
+ * this is the only thing on the sheet that moves on its own.
+ */
+.trace__stylus-tip {
+  animation: stylus-contact 3.2s var(--ease-out-expo) infinite;
+  transform-origin: center;
+}
+
+@keyframes stylus-contact {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/**
+ * Reduced motion stops the pen without hiding it: the stylus still marks NOW,
+ * it just holds still. The trace itself is always painted complete, so its
+ * markers never appear ahead of an animated stroke.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .trace__stylus-tip {
+    animation: none;
+  }
+}

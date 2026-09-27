@@ -1,0 +1,569 @@
+/**
+ * Today: the head of the page, the day as a table, then the pen.
+ *
+ * The multi-pen band chart that used to lead this screen is gone (D-034), and
+ * with it the only ruled surface in the app — so `--axis-rule` now has no
+ * consumer here. A Journey's trace keeps its chart, because there the axis spans
+ * months and the shape carries information a list cannot.
+ */
+
+.today {
+  padding: 0 0 var(--space-8);
+  max-width: none;
+}
+
+/*
+ * One column, one measure. The reference keeps every block on this screen inside
+ * the same left edge — head, table and composer all align — so the column owns
+ * the padding rather than each section setting its own.
+ */
+.today__column {
+  padding: var(--space-6) var(--space-6) 0;
+  max-width: 840px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.today__section + .today__section {
+  margin-top: var(--space-2);
+}
+
+/* --- the head of the page ------------------------------------------------ */
+
+/**
+ * A designation, the date stamped large, the greeting beneath it. Nothing else:
+ * no hero band, no photograph, no chart.
+ */
+.sheet-head {
+  position: relative;
+}
+
+.sheet-head__marks {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+/* The date and the one link out of this screen, on a shared baseline. */
+.sheet-head__stamp-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+/*
+ * Nudged up off the stamp's baseline: the stamp's descenders would otherwise
+ * drag the button below the optical line of the block.
+ */
+.sheet-head__timeline-link {
+  flex-shrink: 0;
+  margin-bottom: 0.5rem;
+  border-radius: var(--radius-md);
+}
+
+/*
+ * The greeting, demoted from headline to caption. It is a courtesy, not the
+ * page's subject; the date is the subject.
+ */
+.sheet-head__greeting {
+  font-family: var(--font-display);
+  font-size: 1.1875rem;
+  color: var(--ink-secondary);
+}
+
+.sheet-head__caption-sep {
+  color: var(--rule-strong);
+}
+
+.sheet-head__count {
+  font-size: var(--text-meta);
+  color: var(--ink-tertiary);
+}
+
+/* --- the day, as a table ------------------------------------------------- */
+
+/**
+ * Column geometry lives here rather than on each row, so the head row and every
+ * body row cannot drift apart.
+ */
+.day-sheet {
+  /* The chip's own track in the head row; body rows indent by the same width. */
+  --day-chip-column: 34px;
+  --day-time-column: 74px;
+  --day-journey-column: 148px;
+  padding: var(--space-2) 0 0;
+  overflow: hidden;
+}
+
+/*
+ * The head row: a date chip in the left column, then the three column labels.
+ * The chip sits *in* the table rather than above it, which is what lets the
+ * table stand alone without a heading — the date is already at the head of the
+ * page, and this is its short form.
+ */
+.day-sheet__head {
+  display: grid;
+  grid-template-columns:
+    var(--day-chip-column) var(--day-time-column)
+    minmax(0, 1fr) var(--day-journey-column);
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 var(--space-4) var(--space-2);
+  border-bottom: 1px solid var(--rule);
+}
+
+.day-sheet__datechip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  padding: 0.1875rem 0;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  background: var(--sunk);
+  line-height: 1.1;
+}
+
+.day-sheet__datechip-weekday {
+  font-family: var(--font-sans);
+  font-size: 0.5rem;
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.06em;
+  color: var(--ink-tertiary);
+}
+
+.day-sheet__datechip-day {
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.day-sheet__column-label {
+  font-family: var(--font-sans);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-tertiary);
+}
+
+.day-sheet__column-label--end {
+  text-align: right;
+}
+
+.day-sheet__empty {
+  padding: var(--space-5) var(--space-4);
+  font-size: var(--text-body);
+  color: var(--ink-secondary);
+  max-width: 46ch;
+  line-height: 1.65;
+}
+
+/*
+ * The last row of the table. Reads as a row, behaves as a shortcut into the
+ * composer below — it is not a second input.
+ */
+.day-sheet__add {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--rule);
+  font-size: var(--text-meta);
+  color: var(--ink-tertiary);
+  text-align: left;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.day-sheet__add:hover {
+  background: var(--sunk);
+  color: var(--ink-secondary);
+}
+
+/* One row per entry, on the columns the head row established. */
+.day {
+  display: flex;
+  flex-direction: column;
+}
+
+.day__row + .day__row {
+  border-top: 1px solid var(--rule-faint);
+}
+
+.day__button {
+  display: grid;
+  grid-template-columns:
+    var(--day-chip-column) var(--day-time-column)
+    minmax(0, 1fr) var(--day-journey-column);
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: 0.6875rem var(--space-4);
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  transition: background var(--transition-fast);
+}
+
+.day__button:not(.day__button--static):hover {
+  background: var(--sunk);
+}
+
+.day__button--static {
+  cursor: default;
+}
+
+/* The time is a readout — it must align down the column. */
+.day__time {
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  color: var(--ink-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * The row's channel mark. A ring rather than a filled dot, which is what the
+ * reference draws and what keeps four of them down a column from reading as a
+ * column of bullets.
+ *
+ * It has the chip column to itself and is centred in it, so a column of pips
+ * runs straight down under the date chip above.
+ */
+.day__pip {
+  width: 7px;
+  height: 7px;
+  justify-self: center;
+  border-radius: 50%;
+  background: var(--sheet);
+  box-shadow: inset 0 0 0 2px var(--pen-ink, var(--ink-tertiary));
+}
+
+.day__activity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.day__title {
+  font-size: var(--text-body);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.day__summary {
+  font-size: var(--text-meta);
+  color: var(--ink-tertiary);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Tags sit hard right, so the column reads as a column even when tags differ. */
+.day__journeys {
+  display: flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* --- the pen ------------------------------------------------------------- */
+
+/**
+ * Both inputs in one pane: they are the reason the screen gets opened, so they
+ * stay visible rather than hiding behind a button.
+ */
+.capture {
+  padding: var(--space-5);
+}
+
+.capture__heading {
+  display: block;
+  margin-bottom: var(--space-4);
+}
+
+/*
+ * A gutter column marks which input a row is. It is 28px because that is the
+ * width of the icon tile plus its gap — the labels and the fields below then
+ * share one left edge.
+ */
+.capture__field {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.capture__field + .capture__field {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--rule);
+}
+
+/* The icon tile: violet, because writing is the app's own action. */
+.capture__gutter {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  background: var(--violet-wash);
+  color: var(--violet-ink);
+  /* Optically centred against the label's cap height, not the row's top. */
+  margin-top: 0.0625rem;
+}
+
+.capture__body {
+  min-width: 0;
+}
+
+.capture__label {
+  display: block;
+  font-size: var(--text-meta);
+  font-weight: var(--weight-medium);
+  color: var(--ink-secondary);
+}
+
+/* Inside the pane the composer owns no vertical padding of its own. */
+.capture .composer {
+  padding: var(--space-2) 0 0;
+}
+
+/* --- sections below the fold --------------------------------------------- */
+
+.today__section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.today__section-heading {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-section);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.today__section-heading--spaced {
+  margin-bottom: var(--space-3);
+}
+
+.today__section-title {
+  display: block;
+  margin-bottom: var(--space-3);
+}
+
+.today__review {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/*
+ * A reflection is the user's own remark, so it is set apart by a rule in the
+ * margin rather than boxed — a 1px mark, not a thick coloured bar.
+ */
+.today__review-block {
+  margin: 0;
+  padding: var(--space-1) 0 var(--space-1) var(--space-4);
+  border-left: 1px solid var(--rule-strong);
+}
+
+.today__review-text {
+  font-family: var(--font-display);
+  font-size: var(--text-reading);
+  line-height: 1.7;
+  color: var(--ink);
+}
+
+.today__review-source {
+  margin-top: var(--space-2);
+  font-size: var(--text-micro);
+  color: var(--ink-tertiary);
+}
+
+.today__journey-scroller {
+  display: flex;
+  gap: var(--space-3);
+  overflow-x: auto;
+  padding-bottom: var(--space-2);
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule-strong) transparent;
+}
+
+.today__journeys {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* --- up next ------------------------------------------------------------- */
+
+.upcoming {
+  display: flex;
+  flex-direction: column;
+}
+
+.upcoming__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.upcoming__row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.upcoming__row:first-child {
+  padding-top: 0;
+}
+
+.upcoming__main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.upcoming__title {
+  font-size: var(--text-body);
+  overflow-wrap: anywhere;
+}
+
+/*
+ * In the rail the title is the card's subject, so it takes weight and the
+ * app's own violet — this is the "what is coming" line the reference leads with.
+ */
+.rail .upcoming__title {
+  font-size: var(--text-meta);
+  font-weight: var(--weight-medium);
+  color: var(--ink);
+}
+
+.upcoming__journeys {
+  font-size: var(--text-micro);
+  color: var(--ink-tertiary);
+  margin-top: 0.125rem;
+}
+
+.upcoming__when {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.125rem;
+  flex-shrink: 0;
+}
+
+.upcoming__date {
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/*
+ * The countdown is the one figure worth glancing at, so it carries weight
+ * rather than a colour — it sits beside dates that are already ink-coloured.
+ */
+.upcoming__countdown {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-medium);
+  color: var(--ink-secondary);
+  white-space: nowrap;
+}
+
+.rail__journey-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+@media (max-width: 900px) {
+  .today {
+    padding-inline: 0;
+  }
+
+  .today__column {
+    padding-inline: var(--space-5);
+  }
+
+  .day-sheet__head,
+  .day__button {
+    padding-inline: var(--space-3);
+  }
+
+  .sheet-head__stamp-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .sheet-head__timeline-link {
+    margin-bottom: 0;
+  }
+}
+
+/**
+ * Narrow windows: the Journey column is dropped, not shrunk.
+ *
+ * Below 1180px the rail becomes a fixed overlay drawer (AppShell.css), which
+ * sits *over* the right of the reading column. A four-track table then put its
+ * Journey column underneath that drawer, so tags were silently clipped — the
+ * information vanished with nothing to say it had. Moving the tags under the
+ * activity title keeps every field on screen at the app's minimum window.
+ *
+ * `1180px` rather than `900px` deliberately: it is the breakpoint the drawer
+ * appears at, and this rule exists because of the drawer.
+ */
+@media (max-width: 1180px) {
+  .day-sheet {
+    --day-chip-column: 30px;
+    --day-time-column: 64px;
+    /* No track of its own; the tags move into the activity cell. */
+    --day-journey-column: 0px;
+  }
+
+  /* The head row loses the label for a column that no longer exists. */
+  .day-sheet__column-label--end {
+    display: none;
+  }
+
+  .day-sheet__head,
+  .day__button {
+    grid-template-columns:
+      var(--day-chip-column) var(--day-time-column)
+      minmax(0, 1fr);
+  }
+
+  /*
+   * Tags follow the title instead of sitting in their own column, and align
+   * left with it rather than staying flush right against a column that is gone.
+   */
+  .day__activity {
+    gap: var(--space-2);
+  }
+
+  .day__journeys {
+    justify-content: flex-start;
+  }
+}

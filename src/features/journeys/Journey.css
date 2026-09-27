@@ -1,0 +1,1187 @@
+/**
+ * Journey detail screen (UX_SPEC.md §5) — the head of one channel's strip.
+ *
+ * Header hierarchy: channel designation + status → icon + name → intent → date
+ * range → the channel's own trace → tabs. Deliberately no "42 notes / 67%
+ * complete" stat row (AGENTS.md §7), and no cover band (D-032).
+ */
+
+.journey {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  min-width: 0;
+}
+
+/* The details drawer overlays the page at laptop widths. Reserve its space
+ * only while it is open, for the header, tabs and chronology together. */
+@media (max-width: 1180px) {
+  .shell:not(.shell--no-rail) .journey {
+    padding-right: var(--rail-width);
+  }
+}
+
+/**
+ * Identity and the compact activity trace share the reading column's measure.
+ * The dated records should begin in the first screen, below a quiet tab rule.
+ */
+.journey__header {
+  width: 100%;
+  max-width: 940px;
+  padding: var(--space-5) var(--space-6) var(--space-4);
+}
+
+/* Designation, channel number and pen condition, on one line above the name. */
+.journey__marks {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.journey__channel {
+  color: var(--pen-ink);
+  font-weight: var(--weight-medium);
+}
+
+.journey__identity {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+/* A rounded tile in the channel's own ink — the pen's holder. */
+.journey__icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-lg);
+  background: var(--pen-wash);
+  color: var(--pen-ink);
+  flex-shrink: 0;
+  /* Optically aligned with the cap-height of the title beside it. */
+  margin-top: 0.125rem;
+}
+
+.journey__identity-text {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The Journey's name is the sheet's subject here, so it takes display scale. */
+.journey__title {
+  font-family: var(--font-display);
+  font-size: min(var(--text-hero), var(--text-page));
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.015em;
+  line-height: 1.14;
+  color: var(--ink);
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.journey__intent {
+  margin-top: var(--space-2);
+  max-width: 62ch;
+  font-family: var(--font-display);
+  font-size: var(--text-body);
+  line-height: 1.55;
+  color: var(--ink-secondary);
+}
+
+.journey__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-2);
+  font-size: var(--text-meta);
+  color: var(--ink-secondary);
+  flex-wrap: wrap;
+}
+
+.journey__meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.journey__meta-item svg {
+  color: var(--ink-tertiary);
+}
+
+/* --- the channel's trace ------------------------------------------------- */
+
+/**
+ * The Journey's whole span as one line. Full-bleed to the header's edges, so it
+ * reads as the strip this screen is the head of.
+ *
+ * This is the one chart in the app that keeps its ruling, and it earns it: the
+ * axis spans months, so a division marks a real position on it. Six divisions,
+ * aligned with the labelled ticks beneath.
+ */
+.journey__trace {
+  position: relative;
+  margin-top: var(--space-4);
+}
+
+.journey__trace::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--axis-rule) 0 1px,
+    transparent 1px calc(100% / 6)
+  );
+}
+
+/* A baseline under the trace, so a flat stretch still reads as *on* an axis. */
+.journey__trace-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--space-1);
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--rule);
+}
+
+/* --- tabs ---------------------------------------------------------------- */
+
+/**
+ * Tabs sit on one rule instead of another enclosing card. Sticky positioning
+ * keeps views reachable, with an opaque tokenised ground for content below.
+ */
+.journey__tabs {
+  display: flex;
+  gap: var(--space-1);
+  margin: 0 var(--space-6);
+  max-width: calc(940px - 2 * var(--space-6));
+  padding: 0 0 var(--space-1);
+  border-bottom: 1px solid var(--rule);
+  background: var(--sheet);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  overflow-x: auto;
+}
+
+.journey__tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.4375rem var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-meta);
+  color: var(--ink-secondary);
+  transition:
+    color var(--transition-fast),
+    background var(--transition-fast);
+  white-space: nowrap;
+}
+
+.journey__tab:hover {
+  color: var(--ink);
+  background: var(--sunk);
+}
+
+/*
+ * Keep the selected tab's familiar violet wash. Weight carries the same signal,
+ * so selection remains readable in greyscale.
+ */
+.journey__tab[aria-selected='true'] {
+  color: var(--violet-ink);
+  background: var(--violet-wash);
+  font-weight: var(--weight-medium);
+}
+
+.journey__tab[aria-selected='true']:hover {
+  background: var(--violet-wash-strong);
+}
+
+.journey__tab[aria-selected='true'] .journey__tab-count {
+  color: var(--violet-ink);
+}
+
+.journey__tab-count {
+  margin-left: var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  color: var(--ink-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.journey__body {
+  padding: var(--space-4) var(--space-6) var(--space-6);
+  max-width: 940px;
+  flex: 1;
+}
+
+/* Dates stick below the tab strip rather than sliding underneath it. */
+.journey__body .timeline__date {
+  top: calc(var(--space-8) + var(--space-2));
+}
+
+.journey__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.journey__toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  .journey__header,
+  .journey__body {
+    padding-inline: var(--space-5);
+  }
+
+  .journey__tabs {
+    margin-inline: var(--space-5);
+    overflow-x: auto;
+  }
+}
+
+/* --- notes tab ----------------------------------------------------------- */
+
+.note-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.note-row {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--space-4) var(--space-3);
+  border-radius: var(--radius-sm);
+  border-bottom: 1px solid var(--rule);
+  transition: background var(--transition-fast);
+}
+
+.note-row:hover {
+  background: var(--sunk);
+}
+
+.note-row__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.note-row__title {
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  color: var(--ink);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note-row__date {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  color: var(--ink-tertiary);
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.note-row__excerpt {
+  margin-top: var(--space-1);
+  font-size: var(--text-meta);
+  color: var(--ink-secondary);
+  line-height: 1.6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note-row__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* --- tasks tab ----------------------------------------------------------- */
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.task-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  border-bottom: 1px solid var(--rule);
+  transition: background var(--transition-fast);
+}
+
+.task-row:hover {
+  background: var(--sunk);
+}
+
+/* A square key, like everything else the instrument prints. */
+.task-row__checkbox {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  border: 1.5px solid var(--rule-strong);
+  border-radius: 3px;
+  background: var(--sheet);
+  color: transparent;
+  flex-shrink: 0;
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.task-row__checkbox:hover {
+  border-color: var(--ink);
+}
+
+/* Done is the instrument's ink, not a channel colour: it is a fact, not a theme. */
+.task-row__checkbox[aria-checked='true'] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+
+.task-row__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-row__title {
+  font-size: var(--text-body);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.task-row--done .task-row__title {
+  color: var(--ink-tertiary);
+  text-decoration: line-through;
+  text-decoration-color: var(--rule-strong);
+}
+
+.task-row__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+  font-size: var(--text-meta);
+  color: var(--ink-tertiary);
+  flex-wrap: wrap;
+}
+
+.task-row__due--overdue {
+  color: var(--danger);
+}
+
+.task-row__actions {
+  display: flex;
+  gap: var(--space-1);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.task-row:hover .task-row__actions,
+.task-row:focus-within .task-row__actions {
+  opacity: 1;
+}
+
+/* Filing a task into a Journey, from outside any Journey. */
+.task-row__file {
+  position: relative;
+}
+
+.task-row__file-menu {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  z-index: 20;
+  min-width: 200px;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  box-shadow: var(--shadow-overlay);
+}
+
+/* --- inline composer ----------------------------------------------------- */
+
+.composer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) 0 var(--space-4);
+}
+
+/*
+ * A sunk well the pen writes into. On focus it lifts to the sheet's white and
+ * takes the pen's own ring, so the caret's colour and the border agree.
+ */
+.composer__input {
+  flex: 1;
+  padding: 0.5rem 0.6875rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--sunk);
+  font-size: var(--text-body);
+  -webkit-user-select: text;
+  user-select: text;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.composer__input::placeholder {
+  color: var(--ink-tertiary);
+}
+
+.composer__input:focus {
+  outline: none;
+  background: var(--sheet);
+  border-color: var(--pen-1-ink);
+  box-shadow: 0 0 0 3px var(--pen-1-wash);
+}
+
+/* Leading icon, marking which composer this is. */
+.composer__icon {
+  display: grid;
+  place-items: center;
+  color: var(--ink-tertiary);
+  flex-shrink: 0;
+}
+
+/* Optional due date, revealed on request. */
+.composer__date {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+.composer__date-input {
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  background: var(--sheet);
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.composer__date-input:focus {
+  outline: none;
+  border-color: var(--pen-1-ink);
+  box-shadow: 0 0 0 3px var(--pen-1-wash);
+}
+
+.composer__date-input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+/* Filing a log under a Journey, inline. */
+.composer__select {
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  background: var(--sheet);
+  font-size: var(--text-meta);
+  color: var(--ink-secondary);
+  max-width: 140px;
+  flex-shrink: 0;
+}
+
+.composer__select:focus {
+  outline: none;
+  border-color: var(--pen-1-ink);
+  box-shadow: 0 0 0 3px var(--pen-1-wash);
+}
+
+/* --- overview tab -------------------------------------------------------- */
+
+.overview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+  max-width: 68ch;
+}
+
+.overview__section-title {
+  margin-bottom: var(--space-3);
+}
+
+.overview__stat-row {
+  display: flex;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+}
+
+.overview__stat-label {
+  font-size: var(--text-meta);
+  color: var(--ink-tertiary);
+}
+
+.overview__stat-value {
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  margin-top: 0.125rem;
+}
+
+.overview__about {
+  color: var(--ink-secondary);
+  line-height: 1.7;
+  margin-bottom: var(--space-4);
+}
+
+/* --- current focus ------------------------------------------------------- */
+
+/**
+ * The one card on the Overview. It earns a surface because it answers the
+ * question the screen exists for — "where is this now" — and the reference image
+ * leads with it.
+ *
+ * No progress ring: see JourneyOverview.tsx and DECISIONS.md D-007.
+ */
+/*
+ * Where the pen is now. A pane with the channel's cap, so it reads as the head
+ * of this strip rather than as a warm-tinted callout.
+ */
+.focus-card {
+  position: relative;
+  overflow: hidden;
+  padding: var(--space-5);
+  border-radius: var(--radius-md);
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  box-shadow: var(--shadow-subtle);
+}
+
+.focus-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--pen-from, var(--pen-1-from)),
+    var(--pen-to, var(--pen-1-to))
+  );
+}
+
+.focus-card__label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-sans);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--ink-tertiary);
+}
+
+.focus-card__title {
+  margin-top: var(--space-3);
+  font-family: var(--font-display);
+  font-size: 1.1875rem;
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.focus-card__summary {
+  margin-top: var(--space-2);
+  font-size: var(--text-body);
+  line-height: 1.65;
+  color: var(--ink-secondary);
+}
+
+.focus-card__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.focus-card__when {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  color: var(--ink-tertiary);
+}
+
+/* --- latest progress ----------------------------------------------------- */
+
+/**
+ * Turning points on a horizontal path, as in the overview reference. The wave
+ * is a connector, not a measured sparkline — Y encodes nothing; X is order.
+ */
+.progress {
+  margin-bottom: var(--space-7);
+}
+
+.overview .progress {
+  margin-bottom: 0;
+}
+
+.progress__heading {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-title);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.02em;
+}
+
+.progress__board {
+  padding: var(--space-4) var(--space-3) var(--space-5);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+}
+
+.progress__scroller {
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule-strong) transparent;
+}
+
+.progress__track {
+  --progress-count: 3;
+  --progress-date-h: 1.375rem;
+  --progress-node-h: 28px;
+  position: relative;
+  min-width: max(100%, 28rem);
+  padding: 0 var(--space-1);
+}
+
+.progress__wave {
+  position: absolute;
+  /* Inset to the centre of the first and last columns, so nodes sit on the path. */
+  left: calc(50% / var(--progress-count));
+  right: calc(50% / var(--progress-count));
+  top: var(--progress-date-h);
+  height: var(--progress-node-h);
+  width: auto;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.progress__wave-glow {
+  stroke: var(--pen-1-ink);
+  opacity: 0.28;
+}
+
+.progress__wave-line {
+  stroke: var(--pen-1-ink);
+}
+
+.progress__points {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(6.5rem, 1fr);
+  position: relative;
+  z-index: 1;
+}
+
+.progress__point {
+  min-width: 0;
+}
+
+.progress__hit {
+  display: grid;
+  grid-template-rows: var(--progress-date-h) var(--progress-node-h) auto auto;
+  justify-items: center;
+  width: 100%;
+  padding: 0;
+  text-align: center;
+  color: inherit;
+  font: inherit;
+}
+
+.progress__hit--static {
+  cursor: default;
+}
+
+.progress__hit:not(.progress__hit--static):hover .progress__label {
+  color: var(--ink);
+}
+
+.progress__date {
+  grid-row: 1;
+  align-self: end;
+  padding-bottom: var(--space-1);
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.02em;
+  color: var(--ink-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.progress__point[aria-current='step'] .progress__date {
+  color: var(--pen-1-ink);
+}
+
+.progress__node {
+  grid-row: 2;
+  align-self: center;
+  width: 11px;
+  height: 11px;
+  border-radius: var(--radius-pill);
+  background: var(--paper);
+  border: 2px solid var(--pen-1-ink);
+  box-shadow: 0 0 0 3px var(--paper);
+  flex-shrink: 0;
+}
+
+.progress__node--milestone {
+  width: 13px;
+  height: 13px;
+  background: var(--pen-1-ink);
+  border-color: var(--pen-1-ink);
+}
+
+.progress__node--start {
+  border-color: var(--ink-tertiary);
+  background: var(--paper);
+}
+
+.progress__node--now {
+  width: 16px;
+  height: 16px;
+  border: 0;
+  display: grid;
+  place-items: center;
+  background: var(--pen-1-ink);
+  color: var(--paper);
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--pen-1-ink) 70%, transparent));
+}
+
+.progress__label {
+  grid-row: 3;
+  margin-top: var(--space-2);
+  max-width: 12ch;
+  font-size: var(--text-meta);
+  line-height: 1.35;
+  color: var(--ink-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.progress__change {
+  grid-row: 4;
+  margin-top: 0.125rem;
+  font-size: var(--text-micro);
+  color: var(--ink-tertiary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress__node--now {
+    filter: none;
+  }
+}
+
+/* --- tracked states ------------------------------------------------------ */
+
+/**
+ * The honest form of the reference's capability map: the user's own recorded
+ * values, each with the transition that produced it. No percentages, no bars —
+ * nothing here is measured on a scale the app invented.
+ */
+.states {
+  display: flex;
+  flex-direction: column;
+}
+
+.states__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.states__identity {
+  min-width: 0;
+}
+
+.states__subject {
+  display: block;
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.states__field {
+  font-size: var(--text-micro);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-tertiary);
+}
+
+.states__value {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink-tertiary);
+  flex-shrink: 0;
+}
+
+.states__previous {
+  font-size: var(--text-meta);
+  text-decoration: line-through;
+  text-decoration-color: var(--rule-strong);
+}
+
+.states__when {
+  font-size: var(--text-meta);
+  color: var(--ink-tertiary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.states__count {
+  color: var(--ink-tertiary);
+}
+
+/* --- entry points -------------------------------------------------------- */
+
+.entry-points {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-3);
+}
+
+.entry-point {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding: var(--space-4);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  background: var(--sheet);
+  text-align: left;
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.entry-point:hover {
+  border-color: var(--rule-strong);
+  background: var(--sunk);
+}
+
+.entry-point__label {
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  color: var(--ink);
+}
+
+.entry-point__count {
+  font-size: var(--text-meta);
+  color: var(--ink-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.entry-point__hint {
+  font-size: var(--text-micro);
+  color: var(--pen-1-ink);
+}
+
+/* --- milestones ---------------------------------------------------------- */
+
+.milestones {
+  display: flex;
+  flex-direction: column;
+}
+
+.milestones__row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: var(--text-body);
+}
+
+.milestones__icon {
+  color: var(--pen-1-ink);
+  flex-shrink: 0;
+  transform: translateY(1px);
+}
+
+.milestones__title {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.milestones__date {
+  font-size: var(--text-meta);
+  color: var(--ink-tertiary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  /* Date and value stack under the label rather than squeezing. */
+  .states__row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .states__when {
+    grid-column: 2;
+  }
+}
+
+/* --- journey list -------------------------------------------------------- */
+
+.journey-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.journey-list__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+  padding: var(--space-4) var(--space-3);
+  border-radius: var(--radius-sm);
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  transition: background var(--transition-fast);
+}
+
+.journey-list__row:hover {
+  background: var(--sunk);
+}
+
+.journey-list__icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--sunk);
+  color: var(--pen-1-ink);
+  flex-shrink: 0;
+}
+
+.journey-list__row:hover .journey-list__icon {
+  background: var(--sheet);
+}
+
+.journey-list__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.journey-list__title {
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.journey-list__description {
+  margin-top: 0.125rem;
+  font-size: var(--text-meta);
+  color: var(--ink-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.journey-list__aside {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+/* --- Journey card (Today carousel and rail) ------------------------------ */
+
+/**
+ * The card carries its pen as a 3px bar down the **leading edge**, not as a cap
+ * along the top. On a vertical stack in the rail a left bar is what the eye
+ * follows down the column; a top cap reads as a divider between cards rather
+ * than as an identity mark on each.
+ *
+ * This is the one sanctioned side-tab in the app, and it is here because the
+ * pinned reference draws it on exactly these cards (screens 1 and 3). Everywhere
+ * else a channel shows as a tag, an icon, or a trace.
+ *
+ * No cover slot: the placeholder that used to lead this card was the same pale
+ * wash on every Journey, which is a decorative block pretending to be content.
+ */
+.journey-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  padding-left: calc(var(--space-4) + 3px);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  background: var(--sheet);
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  overflow: hidden;
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+/* The pen bar. */
+.journey-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--pen-from), var(--pen-to));
+}
+
+.journey-card:hover {
+  border-color: var(--rule-strong);
+  background: var(--sunk);
+}
+
+.journey-card:focus-visible {
+  outline-offset: 3px;
+}
+
+.journey-card__main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.journey-card__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.journey-card__icon {
+  display: grid;
+  place-items: center;
+  color: var(--pen-ink);
+  flex-shrink: 0;
+}
+
+.journey-card__title {
+  font-size: var(--text-meta);
+  font-weight: var(--weight-medium);
+  line-height: 1.3;
+  color: var(--ink);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.journey-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.journey-card__counts {
+  font-size: var(--text-micro);
+  color: var(--ink-tertiary);
+}
+
+/*
+ * The trace thumbnail. Sized by the card rather than by the component, so three
+ * cards in a column present the same silhouette width regardless of how many
+ * marks each Journey has.
+ *
+ * Clipped, because the trace deliberately draws its pips *past* the lane edge so
+ * a full-scale peak is not flattened — at 28px that overhang would otherwise
+ * escape the card.
+ */
+.journey-card__trace {
+  display: block;
+  width: 52px;
+  height: 28px;
+  overflow: hidden;
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+/* A tile on a board: room to breathe, and the status pill it needs there. */
+.journey-card--board {
+  flex: 0 0 208px;
+  width: 208px;
+  min-height: 108px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  padding-left: calc(var(--space-4) + 3px);
+}
+
+.journey-card--board .journey-card__main {
+  gap: var(--space-3);
+}
+
+.journey-card--board .journey-card__title {
+  font-family: var(--font-display);
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.01em;
+  /* Two lines, so a long Chinese title is not truncated to nothing. */
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.journey-card--board .journey-card__foot {
+  margin-top: auto;
+}
+
+.journey-card--rail {
+  width: 100%;
+}
