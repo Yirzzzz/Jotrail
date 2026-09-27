@@ -1,62 +1,96 @@
-# Jotrail
+# 🧭 Jotrail
 
-A local-first desktop notebook that connects your notes into journeys, helping you
-see how far you've come.
+一款以时间线为核心的本地桌面笔记应用。把零散的笔记、待办和重要变化串成旅程，让你看见自己走过的路。
 
-Write Markdown notes, connect them to a personal theme, and follow how it develops
-through a timeline of notes, tasks, milestones and meaningful changes.
+一次秋招、一个学习计划，或者一份观影清单，都可以是一段「旅程」。你可以随手记下一件事，也可以把相关记录放进同一个主题，慢慢积累出自己的时间线。
 
-## Features
+## 💡 我用它记录什么？
 
-- Markdown notes with live preview, tables, code blocks and math.
-- Flexible Journeys for any long-running theme, with chronological timelines.
-- Lightweight tasks, milestones and state-change history.
-- Local SQLite storage, backups and export, with no account required.
-- Chinese and English interface.
+### 💼 秋招：记下进展，也找到下一步
 
-## Run locally
+最近我正在准备秋招，会用 Jotrail 记录各个岗位的面试进展，标记「一面」「录用」等状态，也把面试中发现的知识缺口记成待办。
 
-Requirements: Node.js 20.19+ or 22.12+, Rust stable, and the native build dependencies
-for Tauri 2. On macOS, install Xcode Command Line Tools. Windows needs MSVC build tools
-and WebView2; Linux needs the WebKitGTK and related native development libraries.
+回看一次面试，就能知道当时聊了什么、哪些地方还需要补充；下次打开时，也有一件明确的事可以接着做。
+
+![秋招旅程：面试状态、时间线与待补充的知识](assets/image-20260927155826963.png)
+
+### 🎬 观影：建一座自己的电影博物馆
+
+我也喜欢记录自己看过的电影。可以为它建一段「电影博物馆」旅程，自定义「未看」「推荐」「一般」「不推荐」等状态，再写下当时的观感。
+
+以后想找一部值得重看的电影，或回忆某次观影的感受，就有了自己的记录可翻。
+
+![电影博物馆：为观影记录自定义状态](assets/image-20260927155635228.png)
+
+### 🌿 日常：给普通的一天留一点记录
+
+除了长期主题，我也会在这里记下每天的待办、生活里的小事，以及偶尔冒出的想法。几句话也值得留下，不必每次都写成长篇。
+
+这些零散的片段会沿着时间积累。回头看时，就能想起那段日子在忙什么，又有哪些事情已经慢慢做成了。
+
+![今日视图：随手记录日常、添加待办并查看接下来的安排](assets/image-20260927160439913.png)
+
+## ✨ 基础功能
+
+- 📝 Markdown 写作：用熟悉的 Markdown 写笔记，实时预览表格、代码块和数学公式
+- 🗂️ 主题旅程：把同一主题下的笔记、事件和任务放在一起，按自己的方式组织记录
+- 🕰️ 时间线回顾：串联笔记、里程碑与状态变化，回看一件事如何慢慢发展
+- ✅ 轻量任务：将待办关联到旅程，完成后留下时间线记录
+
+## 🚀 快速开始
+
+### 1) 环境准备
+
+- Node.js 20.19+ 或 22.12+
+- Rust 稳定版
+- Tauri 2 所需的系统构建依赖：
+  - macOS：Xcode Command Line Tools
+  - Windows：MSVC 构建工具和 WebView2
+  - Linux：WebKitGTK 及相关系统开发库
+
+### 2) 安装依赖
 
 ```bash
 npm ci
+```
+
+### 3) 启动桌面应用
+
+```bash
 npm run dev
 ```
 
-The desktop application currently appears as **Journey Notes**. Development mode adds
-example data only when the notebook is empty; release builds do not seed examples.
-On macOS/Linux, `npm run dev:clean` starts development mode without seeding.
+### 4) 不加载示例数据启动（可选）
 
-This is a desktop-only application. React and Vite provide the interface inside
-Tauri; they are not a separate web version. Opening the frontend in a browser
-shows a desktop-app notice, not a writable notebook.
-
-## Build and check
+在 macOS/Linux 上运行：
 
 ```bash
+npm run dev:clean
+```
+
+这个命令只关闭开发模式的示例数据加载，不会清空已有笔记。
+
+## 📦 检查与打包
+
+```bash
+# 检查代码格式、ESLint、TypeScript 类型，并构建桌面前端
 npm run check
+
+# 打包桌面应用
 npm run build
 ```
 
-`check` runs formatting, lint, TypeScript and the desktop frontend build. `build`
-packages the desktop application with Tauri; the current bundle configuration produces a macOS
-`.app` under `src-tauri/target/release/bundle/macos/`.
+当前打包配置面向 macOS，会在以下目录生成 `.app` 应用：
 
-`dev:frontend` and `build:frontend` are internal Tauri build hooks. Use `npm run dev`
-to run the application and `npm run build` to package it.
+```text
+src-tauri/target/release/bundle/macos/
+```
 
-Tests and internal development materials are kept locally, not in this source
-distribution. Leave Rust's optional `local-tests` feature disabled in a fresh clone.
+## 🔒 数据与隐私
 
-## Data and fonts
+笔记数据保存在操作系统的应用数据目录中，不在项目仓库内。
+可以在「设置」中查看存储位置，并进行备份和导出。
 
-The desktop notebook lives in the operating system's application-data directory,
-not in the repository. Settings shows the location and provides backup/export tools.
+## 🔗 交流社区
 
-Optional proprietary CJK font files are not included. A fresh build may report
-unresolved YaHei font paths; the interface falls back to system fonts. Review any
-locally added font assets before distributing a packaged application.
-
-Built with Tauri 2, React, TypeScript, Vite and SQLite.
+感谢 [LINUX DO 社区](https://linux.do/latest) 提供的交流空间，也欢迎分享你的使用体验与建议。
