@@ -35,25 +35,6 @@ export function excerpt(body: string, limit = EXCERPT_LIMIT): string {
   return `${characters.slice(0, limit).join('').trimEnd()}…`;
 }
 
-/**
- * Excerpt for a timeline summary, skipping a first line that merely repeats the
- * title. Mirrors `notes::excerpt` in Rust — without this a logged note prints
- * the same text as both its heading and its summary.
- */
-export function summaryExcerpt(body: string, title: string, limit = EXCERPT_LIMIT): string {
-  const lines = body
-    .split('\n')
-    .map((raw) => raw.replace(/^#+/, '').trim())
-    .filter((raw) => raw.length > 0);
-
-  if (lines[0] === title.trim()) lines.shift();
-
-  const flattened = lines.join(' · ');
-  const characters = [...flattened];
-  if (characters.length <= limit) return flattened;
-  return `${characters.slice(0, limit).join('').trimEnd()}…`;
-}
-
 /** Body with a leading `# Title` line removed, so it isn't shown twice. */
 export function bodyWithoutTitleHeading(note: Pick<NoteWithLinks, 'title' | 'bodyMd'>): string {
   const lines = note.bodyMd.split('\n');

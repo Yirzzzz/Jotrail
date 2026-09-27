@@ -12,7 +12,7 @@ through a timeline of notes, tasks, milestones and meaningful changes.
 - Flexible Journeys for any long-running theme, with chronological timelines.
 - Lightweight tasks, milestones and state-change history.
 - Local SQLite storage, backups and export, with no account required.
-- Chinese and English interface, with light and dark themes.
+- Chinese and English interface.
 
 ## Run locally
 
@@ -29,14 +29,9 @@ The desktop application currently appears as **Journey Notes**. Development mode
 example data only when the notebook is empty; release builds do not seed examples.
 On macOS/Linux, `npm run dev:clean` starts development mode without seeding.
 
-For a browser-only UI preview:
-
-```bash
-npm run dev:web
-```
-
-The browser preview uses in-memory example data. Changes there do not persist and
-do not touch the desktop notebook.
+This is a desktop-only application. React and Vite provide the interface inside
+Tauri; they are not a separate web version. Opening the frontend in a browser
+shows a desktop-app notice, not a writable notebook.
 
 ## Build and check
 
@@ -45,9 +40,12 @@ npm run check
 npm run build
 ```
 
-`check` runs formatting, lint, TypeScript and the web build. `build` packages the
-desktop application with Tauri; the current bundle configuration produces a macOS
+`check` runs formatting, lint, TypeScript and the desktop frontend build. `build`
+packages the desktop application with Tauri; the current bundle configuration produces a macOS
 `.app` under `src-tauri/target/release/bundle/macos/`.
+
+`dev:frontend` and `build:frontend` are internal Tauri build hooks. Use `npm run dev`
+to run the application and `npm run build` to package it.
 
 Tests and internal development materials are kept locally, not in this source
 distribution. Leave Rust's optional `local-tests` feature disabled in a fresh clone.

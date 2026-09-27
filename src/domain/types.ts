@@ -534,7 +534,6 @@ export interface AppInfo {
   databasePath: string;
   schemaVersion: number;
   seededDemoData: boolean;
-  supportsDataFiles?: boolean;
 }
 
 export interface BackupInfo {

@@ -14,7 +14,7 @@ function backupDate(backup: BackupInfo): string {
   return `${formatFullDate(backup.createdAt)} · ${formatTimeOfDay(backup.createdAt)}`;
 }
 
-export function DataManagement({ supportsFiles }: { supportsFiles: boolean }) {
+export function DataManagement() {
   const { t } = useI18n();
   const repository = useRepository();
   const invalidate = useInvalidate();
@@ -25,10 +25,7 @@ export function DataManagement({ supportsFiles }: { supportsFiles: boolean }) {
   const busyRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<[string, string] | null>(null);
-  const backups = useRepoQuery(
-    (repo) => (supportsFiles ? repo.listBackups() : Promise.resolve([])),
-    [supportsFiles],
-  );
+  const backups = useRepoQuery((repo) => repo.listBackups(), []);
   const deleted = useRepoQuery(
     (repo) => (showTrash ? repo.listDeletedNotes() : Promise.resolve([])),
     [showTrash],
@@ -81,119 +78,108 @@ export function DataManagement({ supportsFiles }: { supportsFiles: boolean }) {
             '保存完整快照，或将笔记导出为 Markdown。导出也包含旅程关联、任务、事件和状态。',
           )}
         </p>
-        {!supportsFiles ? (
-          <p className="settings__help">
-            {t(
-              'File backups and exports are available in the desktop app.',
-              '文件备份和导出功能可在桌面应用中使用。',
-            )}
+        <div className="settings__actions">
+          <button
+            type="button"
+            className="button button--primary"
+            disabled={Boolean(busy)}
+            onClick={() =>
+              void run(t('Creating backup…', '正在创建备份…'), async () => {
+                const result = await repository.createBackup();
+                setMessage([`Backup saved: ${result.path}`, `备份已保存：${result.path}`]);
+              })
+            }
+          >
+            <Save size={14} aria-hidden />
+            {t('Back up now', '立即备份')}
+          </button>
+          <button
+            type="button"
+            className="button"
+            disabled={Boolean(busy)}
+            onClick={() =>
+              void run(t('Exporting notebook…', '正在导出笔记本…'), async () => {
+                const result = await repository.exportNotebook();
+                setMessage([
+                  `Exported ${result.noteCount} notes: ${result.path}`,
+                  `已导出 ${result.noteCount} 篇笔记：${result.path}`,
+                ]);
+              })
+            }
+          >
+            <Download size={14} aria-hidden />
+            {t('Export notebook', '导出笔记本')}
+          </button>
+        </div>
+        <div className="settings__actions">
+          {(['backups', 'exports'] as const).map((kind) => (
+            <button
+              key={kind}
+              type="button"
+              className="button"
+              disabled={Boolean(busy)}
+              onClick={() =>
+                void run(
+                  t('Opening folder…', '正在打开文件夹…'),
+                  () => repository.openDataFolder(kind),
+                  false,
+                )
+              }
+            >
+              <FolderOpen size={14} aria-hidden />
+              {t(
+                `Open ${kind} folder`,
+                kind === 'backups' ? '打开备份文件夹' : '打开导出文件夹',
+              )}
+            </button>
+          ))}
+        </div>
+        <p className="settings__help">
+          {t(
+            'Files stay on this computer. Copy a backup or export to another disk to protect against device loss.',
+            '文件保存在这台设备上。建议将备份或导出文件复制到其他磁盘，以防设备丢失。',
+          )}
+        </p>
+        {backups.error ? (
+          <p className="error-banner" role="alert">
+            {backups.error}
           </p>
-        ) : (
-          <>
-            <div className="settings__actions">
-              <button
-                type="button"
-                className="button button--primary"
-                disabled={Boolean(busy)}
-                onClick={() =>
-                  void run(t('Creating backup…', '正在创建备份…'), async () => {
-                    const result = await repository.createBackup();
-                    setMessage([`Backup saved: ${result.path}`, `备份已保存：${result.path}`]);
-                  })
-                }
-              >
-                <Save size={14} aria-hidden />
-                {t('Back up now', '立即备份')}
-              </button>
-              <button
-                type="button"
-                className="button"
-                disabled={Boolean(busy)}
-                onClick={() =>
-                  void run(t('Exporting notebook…', '正在导出笔记本…'), async () => {
-                    const result = await repository.exportNotebook();
-                    setMessage([
-                      `Exported ${result.noteCount} notes: ${result.path}`,
-                      `已导出 ${result.noteCount} 篇笔记：${result.path}`,
-                    ]);
-                  })
-                }
-              >
-                <Download size={14} aria-hidden />
-                {t('Export notebook', '导出笔记本')}
-              </button>
-            </div>
-            <div className="settings__actions">
-              {(['backups', 'exports'] as const).map((kind) => (
+        ) : null}
+        {backups.isLoading ? (
+          <p className="settings__help">{t('Loading backups…', '正在加载备份…')}</p>
+        ) : null}
+        {backups.data?.length ? (
+          <ul className="settings__records" aria-label={t('Saved backups', '已保存的备份')}>
+            {backups.data.map((backup) => (
+              <li key={backup.id}>
+                <div>
+                  <span>{backupDate(backup)}</span>
+                  <small>
+                    {backup.beforeRestore
+                      ? t('Before restore', '恢复前的备份')
+                      : t('Manual backup', '手动备份')}{' '}
+                    · {Math.max(1, Math.round(backup.sizeBytes / 1024))} KB
+                  </small>
+                </div>
                 <button
-                  key={kind}
                   type="button"
                   className="button"
                   disabled={Boolean(busy)}
-                  onClick={() =>
-                    void run(
-                      t('Opening folder…', '正在打开文件夹…'),
-                      () => repository.openDataFolder(kind),
-                      false,
-                    )
-                  }
-                >
-                  <FolderOpen size={14} aria-hidden />
-                  {t(
-                    `Open ${kind} folder`,
-                    kind === 'backups' ? '打开备份文件夹' : '打开导出文件夹',
+                  onClick={() => setSelected(backup)}
+                  aria-label={t(
+                    `Restore backup from ${backupDate(backup)}`,
+                    `恢复 ${backupDate(backup)} 的备份`,
                   )}
+                >
+                  <RotateCcw size={14} aria-hidden />
+                  {t('Restore', '恢复')}
                 </button>
-              ))}
-            </div>
-            <p className="settings__help">
-              {t(
-                'Files stay on this computer. Copy a backup or export to another disk to protect against device loss.',
-                '文件保存在这台设备上。建议将备份或导出文件复制到其他磁盘，以防设备丢失。',
-              )}
-            </p>
-            {backups.error ? (
-              <p className="error-banner" role="alert">
-                {backups.error}
-              </p>
-            ) : null}
-            {backups.isLoading ? (
-              <p className="settings__help">{t('Loading backups…', '正在加载备份…')}</p>
-            ) : null}
-            {backups.data?.length ? (
-              <ul className="settings__records" aria-label={t('Saved backups', '已保存的备份')}>
-                {backups.data.map((backup) => (
-                  <li key={backup.id}>
-                    <div>
-                      <span>{backupDate(backup)}</span>
-                      <small>
-                        {backup.beforeRestore
-                          ? t('Before restore', '恢复前的备份')
-                          : t('Manual backup', '手动备份')}{' '}
-                        · {Math.max(1, Math.round(backup.sizeBytes / 1024))} KB
-                      </small>
-                    </div>
-                    <button
-                      type="button"
-                      className="button"
-                      disabled={Boolean(busy)}
-                      onClick={() => setSelected(backup)}
-                      aria-label={t(
-                        `Restore backup from ${backupDate(backup)}`,
-                        `恢复 ${backupDate(backup)} 的备份`,
-                      )}
-                    >
-                      <RotateCcw size={14} aria-hidden />
-                      {t('Restore', '恢复')}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : !backups.isLoading && !backups.error ? (
-              <p className="settings__help">{t('No backups yet.', '还没有备份。')}</p>
-            ) : null}
-          </>
-        )}
+              </li>
+            ))}
+          </ul>
+        ) : !backups.isLoading && !backups.error ? (
+          <p className="settings__help">{t('No backups yet.', '还没有备份。')}</p>
+        ) : null}
         {message ? (
           <p className="settings__result selectable" role="status">
             {t(...message)}

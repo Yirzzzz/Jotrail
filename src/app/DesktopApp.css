@@ -1,0 +1,27 @@
+.desktop-required {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  padding: 32px;
+  overflow-y: auto;
+  background: var(--paper);
+}
+
+.desktop-required__content {
+  display: grid;
+  gap: 16px;
+  max-width: 440px;
+  color: var(--ink-secondary);
+  user-select: text;
+}
+
+.desktop-required h1 {
+  color: var(--ink);
+  font-size: var(--text-title);
+  font-weight: 500;
+}
+
+.desktop-required code {
+  font-family: var(--font-mono);
+  color: var(--ink);
+}

@@ -99,7 +99,7 @@ export function SettingsScreen() {
         </dl>
       </section>
 
-      <DataManagement supportsFiles={info.data?.supportsDataFiles === true} />
+      <DataManagement />
 
       <section className="settings__section">
         <h2 className="section-label settings__section-title">{t('Privacy', '隐私')}</h2>

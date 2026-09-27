@@ -729,7 +729,6 @@ pub struct AppInfo {
     pub database_path: String,
     pub schema_version: i64,
     pub seeded_demo_data: bool,
-    pub supports_data_files: bool,
 }
 
 /// Surfaced in Settings so the user can always find their own data on disk.
@@ -740,7 +739,6 @@ pub fn app_info(state: State<'_, AppState>) -> AppResult<AppInfo> {
         database_path: state.database_path.to_string_lossy().to_string(),
         schema_version: crate::db::migrations::current_version(&db)?,
         seeded_demo_data: state.seeded_demo_data,
-        supports_data_files: true,
     })
 }
 

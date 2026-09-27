@@ -1,5 +1,5 @@
 /**
- * Register presentation logic, plus the title grouper.
+ * Register presentation logic.
  *
  * A **register** is one kind of tracked thing inside a Journey — papers,
  * positions, films. The things themselves are `Subject` rows; everything else a
@@ -9,13 +9,7 @@
  * All pure, so the rules stay testable without a renderer or a database.
  */
 
-import type {
-  ProposedSubject,
-  RegisterTally,
-  StageOption,
-  StageTone,
-  SubjectSummary,
-} from './types';
+import type { RegisterTally, StageOption, StageTone, SubjectSummary } from './types';
 import { isStageTone } from './types';
 
 /**
@@ -190,162 +184,6 @@ export function crossSection(tally: RegisterTally): RegisterCrossSection {
     unstaged: tally.unstaged,
     total: tally.total,
   };
-}
-
-// ---------------------------------------------------------------------------
-// Grouping titles that were written before registers existed
-// ---------------------------------------------------------------------------
-
-/** Longest shared leading run of characters. */
-function sharedPrefix(left: string, right: string): string {
-  const leftChars = [...left];
-  const rightChars = [...right];
-  let taken = 0;
-  while (taken < leftChars.length && taken < rightChars.length) {
-    if (leftChars[taken] !== rightChars[taken]) break;
-    taken += 1;
-  }
-  return leftChars.slice(0, taken).join('');
-}
-
-/** Longest shared trailing run of characters. */
-function sharedSuffix(left: string, right: string): string {
-  const leftChars = [...left].reverse();
-  const rightChars = [...right].reverse();
-  let taken = 0;
-  while (taken < leftChars.length && taken < rightChars.length) {
-    if (leftChars[taken] !== rightChars[taken]) break;
-    taken += 1;
-  }
-  return leftChars.slice(0, taken).reverse().join('');
-}
-
-const CJK = /[\u3000-\u9fff\uf900-\ufaff]/;
-
-/**
- * Whether two remainders end with the same *word* rather than the same character.
- *
- * The case this exists for: `2026 AAAI 投稿` and `2026 ICML 投稿` share the prefix
- * `2026 `, which ends in a space and would otherwise look like a name. But both
- * remainders end in `投稿`, so the titles diverge in the middle and reconverge —
- * the name has not finished, and `2026` is a year. Whereas `投稿` and
- * `一轮大修返稿` share only `稿`, mid-word, which is coincidence.
- */
-function remaindersEndWithSameWord(first: string, second: string): boolean {
-  // The shared suffix carries its own leading space (`" 投稿"`), which has to go
-  // before the boundary check — otherwise the head reads `AAAI` with no trailing
-  // space and the whole condition silently never fires.
-  const suffix = sharedSuffix(first, second).replace(/^\s+/, '');
-  if (!suffix) return false;
-
-  return [first, second].every((rest) => {
-    const head = rest.slice(0, rest.length - suffix.length);
-    return head.length === 0 || /\s$/.test(head);
-  });
-}
-
-/** Whether a shared prefix is believable as a thing's name. */
-function prefixIsBelievable(prefix: string, first: string, second: string): boolean {
-  if ([...prefix].length < 2) return false;
-  if (!first.trim() || !second.trim()) return false;
-  if (remaindersEndWithSameWord(first, second)) return false;
-
-  const last = [...prefix].at(-1);
-  if (!last) return false;
-  if (/\s/.test(last)) return true;
-
-  // A script change is a boundary the writer made without typing a separator:
-  // `卫澜深海——VLA` + `一面`.
-  const endIsCjk = CJK.test(last);
-  return [first, second]
-    .map((rest) => [...rest].at(0))
-    .every((start) => start !== undefined && CJK.test(start) !== endIsCjk);
-}
-
-/**
- * Find things that were written as `name + stage` in event titles.
- *
- * Mirrors `subjects::group_by_shared_prefix` in Rust, which is the real
- * implementation — this copy exists so `dev:web` and the frontend tests behave
- * the same (D-017). Both are tested against the same real titles.
- *
- * The insight is that **repetition reveals the boundary**: a name used twice
- * leaves a shared prefix, so no vocabulary of stage words is needed and the rule
- * is language-neutral. Something recorded only once is deliberately left alone —
- * `上海仙工一面` could be a position at 一面 or one whole event, and only the user
- * knows which.
- *
- * @param titles `[eventId, title]` pairs, in any order.
- */
-export function groupTitlesBySharedPrefix(titles: [string, string][]): ProposedSubject[] {
-  /*
-   * Sorting by title is what makes shared prefixes adjacent, but it is *not* the
-   * order events should be reported in — `events` is oldest-first, and the caller
-   * shows the stages as a sequence. The input position travels with each title so
-   * chronology can be restored per group.
-   *
-   * Without this, `TMM 一轮大修返稿` sorts before `TMM 投稿` and the preview reads
-   * the revision before the submission. A test caught exactly that.
-   */
-  const indexed: [number, string, string][] = titles.map(([id, title], position) => [
-    position,
-    id,
-    title,
-  ]);
-  const sorted = [...indexed].sort((left, right) => left[2].localeCompare(right[2]));
-  const groups: ProposedSubject[] = [];
-  let index = 0;
-
-  while (index < sorted.length) {
-    const current = sorted[index]!;
-    const next = sorted[index + 1];
-    let prefix = '';
-
-    if (next) {
-      const candidate = sharedPrefix(current[2], next[2]);
-      if (
-        prefixIsBelievable(
-          candidate,
-          current[2].slice(candidate.length),
-          next[2].slice(candidate.length),
-        )
-      ) {
-        prefix = candidate;
-      }
-    }
-
-    if (!prefix) {
-      index += 1;
-      continue;
-    }
-
-    const members = [current, next!];
-    let cursor = index + 2;
-    // Extend only while the next title shares the *whole* cluster prefix, which
-    // is what stops `2026 AAAI` and `2026 ICML` collapsing into `2026`.
-    while (cursor < sorted.length) {
-      const candidate = sorted[cursor]!;
-      if (!candidate[2].startsWith(prefix)) break;
-      if (!candidate[2].slice(prefix.length).trim()) break;
-      members.push(candidate);
-      cursor += 1;
-    }
-
-    // Back into the order the events actually happened in.
-    members.sort((left, right) => left[0] - right[0]);
-
-    groups.push({
-      title: prefix.trim(),
-      events: members.map(([, eventId, title]) => [
-        eventId,
-        title,
-        title.slice(prefix.length).trim(),
-      ]),
-    });
-    index = cursor;
-  }
-
-  return groups.sort((left, right) => left.title.localeCompare(right.title));
 }
 
 /** A title read as "the thing it is about" plus "the stage it reached". */

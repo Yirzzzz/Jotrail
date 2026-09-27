@@ -7,15 +7,14 @@
   "scripts": {
     "dev": "tauri dev",
     "dev:clean": "JOURNEY_NOTES_NO_SEED=1 tauri dev",
-    "dev:web": "vite",
-    "build:web": "vite build",
+    "dev:frontend": "vite",
+    "build:frontend": "vite build",
     "build": "tauri build",
-    "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "npm run format:check && npm run lint && npm run typecheck && npm run build:web"
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run build:frontend"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.0",
