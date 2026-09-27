@@ -1,104 +1,64 @@
-# Journey Notes — Codex Starter Pack
+# Jotrail
 
-A product/engineering handoff for building a desktop note-taking application centered on **Journeys and timelines**.
+A local-first desktop notebook that connects your notes into journeys, helping you
+see how far you've come.
 
-## One sentence
+Write Markdown notes, connect them to a personal theme, and follow how it develops
+through a timeline of notes, tasks, milestones and meaningful changes.
 
-Journey Notes is a local-first Markdown-oriented desktop notebook where users can create thematic **Journeys** and naturally accumulate a chronological record of notes, tasks, events, reflections, and state changes.
+## Features
 
-## Why this exists
+- Markdown notes with live preview, tables, code blocks and math.
+- Flexible Journeys for any long-running theme, with chronological timelines.
+- Lightweight tasks, milestones and state-change history.
+- Local SQLite storage, backups and export, with no account required.
+- Chinese and English interface, with light and dark themes.
 
-Traditional note apps organize around files, folders, pages, or blocks. This product adds a second organizing axis:
+## Run locally
 
-> `Everything -> Journey -> Time`
-
-A Journey may be “秋招 2026”, “VLA 学习”, “论文修改”, “健身”, “旅行计划”, or anything else. The product must remain generic.
-
-## Status
-
-The first vertical slice is implemented and runs as a desktop app.
+Requirements: Node.js 20.19+ or 22.12+, Rust stable, and the native build dependencies
+for Tauri 2. On macOS, install Xcode Command Line Tools. Windows needs MSVC build tools
+and WebView2; Linux needs the WebKitGTK and related native development libraries.
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
-`DEVELOPING.md` covers setup and commands. `docs/implementation/STATUS.md`
-records what works, which checks were run, and what is deliberately not built
-yet.
+The desktop application currently appears as **Journey Notes**. Development mode adds
+example data only when the notebook is empty; release builds do not seed examples.
+On macOS/Linux, `npm run dev:clean` starts development mode without seeding.
 
-The published source includes the application, build configuration, migrations and
-runtime demo data. Tests and internal diagnostic scripts stay local and are not
-included. `npm run check` validates formatting, lint, TypeScript and the web build;
-it does not run a regression suite in this source-only distribution.
+For a browser-only UI preview:
 
-## Start here
-
-To understand the product before changing it:
-
-1. Read `AGENTS.md`.
-2. Read the specs in `docs/`.
-3. Inspect `docs/design/reference/journey-timeline-primary.png`.
-4. Read `docs/implementation/STATUS.md` for the current state and next task.
-5. Read `docs/DECISIONS.md` — D-012 onwards record the choices made while
-   building, and why.
-
-## Package map
-
-```text
-AGENTS.md                         Agent operating contract
-CODEX_START_PROMPT.md             Paste/start instruction for Codex
-README.md                         This file
-
-docs/
-  DECISIONS.md                    Decisions already made + open questions
-  product/
-    PRODUCT_SPEC.md               Product model and scope
-    USER_FLOWS.md                 Core user flows
-  design/
-    UX_SPEC.md                    Screen and interaction spec
-    STYLE_TOKENS.md               Visual system guidance
-    reference/
-      journey-timeline-primary.png
-      journey-timeline-exploration.png
-      home-dashboard-exploration.png
-  architecture/
-    ARCHITECTURE.md               Technical architecture
-    DATA_MODEL.md                 Domain and persistence model
-    schema.sql                    Starting SQLite schema
-  implementation/
-    MVP_PLAN.md                   Build order
-    ACCEPTANCE.md                 Definition of done
-    STATUS.md                     Agent-maintained progress log
-
-fixtures/
-  demo-seed.json                  Demo data for visual implementation
-
-DEVELOPING.md                     Setup, commands, conventions
-src/                              React + TypeScript frontend
-src-tauri/                        Rust backend, migrations, repositories
+```bash
+npm run dev:web
 ```
 
-## Primary visual reference
+The browser preview uses in-memory example data. Changes there do not persist and
+do not touch the desktop notebook.
 
-`docs/design/reference/journey-timeline-primary.png`
+## Build and check
 
-It demonstrates the target feeling: personal, calm, editorial, timeline-first, information-rich without looking like enterprise software.
+```bash
+npm run check
+npm run build
+```
 
-## Important scope note
+`check` runs formatting, lint, TypeScript and the web build. `build` packages the
+desktop application with Tauri; the current bundle configuration produces a macOS
+`.app` under `src-tauri/target/release/bundle/macos/`.
 
-The reference Journey happens to be a job-search Journey. That does **not** mean the product is a recruitment app. Job positions, skills, interviews, and similar objects must be implemented as optional/custom domain views on top of the generic Journey system.
+Tests and internal development materials are kept locally, not in this source
+distribution. Leave Rust's optional `local-tests` feature disabled in a fresh clone.
 
-## MVP outcome
+## Data and fonts
 
-A successful first MVP lets a user:
+The desktop notebook lives in the operating system's application-data directory,
+not in the repository. Settings shows the location and provides backup/export tools.
 
-- create a Journey
-- write a Markdown note
-- link it to the Journey
-- see it appear chronologically in the Journey Timeline
-- create and complete a Journey-linked task
-- see completion/history reflected on the Timeline
-- close and reopen the desktop app without losing data
+Optional proprietary CJK font files are not included. A fresh build may report
+unresolved YaHei font paths; the interface falls back to system fonts. Review any
+locally added font assets before distributing a packaged application.
 
-Everything else is secondary until this loop feels excellent.
+Built with Tauri 2, React, TypeScript, Vite and SQLite.
