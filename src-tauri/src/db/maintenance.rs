@@ -107,23 +107,22 @@ impl Drop for UpgradedSnapshot {
     }
 }
 
-/// The previous public version had no image table. Validate its exact schema
-/// before running any migration, and upgrade only an isolated disk copy. Even a
-/// text-only notebook can be large, so do not load its database into memory.
+/// Accept only explicitly supported historical schemas and migration ledgers,
+/// then upgrade an isolated disk copy. The original backup stays read-only, and
+/// even a large text/image notebook never has to be loaded wholly into memory.
 fn upgrade_previous_snapshot(source: &Connection, data_dir: &Path) -> AppResult<UpgradedSnapshot> {
-    let expected = super::open_in_memory()?;
-    // Migration 8 adds only this table and its index. Future schema changes must
-    // explicitly extend this compatibility check rather than accept arbitrary SQL.
-    if super::migrations::current_version(&expected)? != 8
-        || super::migrations::current_version(source)? != 7
-    {
+    let version = super::migrations::current_version(source)?;
+    if !matches!(version, 7 | 8) {
         return Err(AppError::Invalid(
             "This backup is not compatible with this version of Journey Notes".into(),
         ));
     }
-    expected.execute_batch(
-        "DROP TABLE event_images; DELETE FROM schema_migrations WHERE version = 8;",
-    )?;
+    // Rebuild the exact historical schema from our migrations rather than
+    // guessing it by dropping new tables from the current schema. This catches
+    // forged version numbers, missing migrations and any foreign SQL objects.
+    let expected = Connection::open_in_memory()?;
+    expected.execute_batch("PRAGMA foreign_keys = ON;")?;
+    super::migrations::run_until(&expected, version)?;
     validate_against(source, &expected)?;
 
     let directory = folder(data_dir, "backups")?.join(format!(
@@ -261,7 +260,7 @@ pub fn list_backups(data_dir: &Path) -> AppResult<Vec<BackupInfo>> {
 pub fn restore_backup(conn: &mut Connection, data_dir: &Path, id: &str) -> AppResult<BackupInfo> {
     let path = backup_dir(data_dir, id)?.join(SNAPSHOT_FILE);
     let source = read_only(&path)?;
-    let upgraded = if super::migrations::current_version(&source)? == 7 {
+    let upgraded = if matches!(super::migrations::current_version(&source)?, 7 | 8) {
         Some(upgrade_previous_snapshot(&source, data_dir)?)
     } else {
         None

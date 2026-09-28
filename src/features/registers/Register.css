@@ -1,5 +1,5 @@
 /**
- * Register — a set of tracked things, read as a list grouped by stage.
+ * Register — tracked things in a flat list, with state categories as peers.
  *
  * Deliberately not a board. A stage vocabulary the user types has no defined
  * order, so columns would imply a progression the data does not have, and
@@ -27,49 +27,6 @@
 /* The way into the register's vocabulary, beside the counts it describes. */
 .register__stages-button {
   flex-shrink: 0;
-}
-
-/* --- groups -------------------------------------------------------------- */
-
-.register__group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-/* A stage heading is a section marking, so it reads as one: label, count, rule. */
-.register__group-head {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.register__group-head .section-label {
-  color: var(--ink-secondary);
-}
-
-.register__group-count {
-  font-family: var(--font-mono);
-  font-size: var(--text-micro);
-  color: var(--ink-tertiary);
-  font-variant-numeric: tabular-nums;
-}
-
-.register__group-rule {
-  flex: 1;
-  height: 1px;
-  background: var(--rule);
-}
-
-/*
- * A stage of the set that nothing is at. Indented to the row grid so the absence
- * sits where the rows would be, which is what makes it read as "this stage, empty"
- * rather than as a stray line of text.
- */
-.register__group-empty {
-  padding: var(--space-2) var(--space-3);
-  font-size: var(--text-micro);
-  color: var(--ink-tertiary);
 }
 
 /* --- rows ---------------------------------------------------------------- */

@@ -23,6 +23,11 @@
 import { useState } from 'react';
 
 import { Modal } from '@/components/Modal';
+import { SubjectStageField, useSubjectField } from '@/features/registers/SubjectField';
+import {
+  ClassificationField,
+  useClassificationField,
+} from '@/features/registers/ClassificationField';
 import { useInvalidate, useRepository } from '@/data/RepositoryContext';
 import {
   canEditEventImages,
@@ -58,6 +63,17 @@ export function EditEventDialog({ entry, onClose }: Props) {
   const [summary, setSummary] = useState(entry.summary ?? '');
   const [reflection, setReflection] = useState(entry.reflection ?? '');
   const imageField = useEventImages(entry.images);
+  const subjectField = useSubjectField({
+    journeyId: entry.journeys[0]?.id ?? null,
+    linkedJourneyIds: entry.journeys.map((journey) => journey.id),
+    entryTitle: entry.title,
+    initialSubjectId: entry.subjectId,
+    initialStage: entry.stage,
+  });
+  const classificationField = useClassificationField({
+    journeyIds: entry.journeys.map((journey) => journey.id),
+    initial: entry.classifications,
+  });
   const [date, setDate] = useState(dateInputValue(entry.occurredAt));
   const [time, setTime] = useState(timeInputValue(entry.occurredAt));
 
@@ -92,15 +108,30 @@ export function EditEventDialog({ entry, onClose }: Props) {
       await repository.updateTimelineEvent(entry.id, {
         ...(editable
           ? {
-              title: title.trim(),
+              ...(title.trim() !== entry.title.trim() ? { title: title.trim() } : {}),
               // Emptied on purpose reads as `null`, which clears the field rather than
               // storing an empty string.
-              summary: summary.trim() || null,
-              reflection: reflection.trim() || null,
-              occurredAt,
+              ...(summary.trim() !== (entry.summary ?? '').trim()
+                ? { summary: summary.trim() || null }
+                : {}),
+              ...(reflection.trim() !== (entry.reflection ?? '').trim()
+                ? { reflection: reflection.trim() || null }
+                : {}),
+              // Minute-resolution inputs must not round an untouched timestamp and
+              // reorder same-minute history when only a classification is corrected.
+              ...(date !== dateInputValue(entry.occurredAt) ||
+              time !== timeInputValue(entry.occurredAt)
+                ? { occurredAt }
+                : {}),
             }
           : {}),
         ...(imagesEditable ? { images: imageField.inputs } : {}),
+        ...(imagesEditable && subjectField.stageTouched
+          ? { stage: subjectField.stage.trim() || null }
+          : {}),
+        ...(imagesEditable && classificationField.inputs.length > 0
+          ? { classifications: classificationField.inputs }
+          : {}),
       });
       invalidate();
       onClose();
@@ -197,11 +228,9 @@ export function EditEventDialog({ entry, onClose }: Props) {
       title={
         planned
           ? t('Edit plan', '编辑计划')
-          : editable
+          : editable || imagesEditable
             ? t('Edit event', '编辑事件')
-            : imagesEditable && !revertible
-              ? t('Edit event images', '编辑事件图片')
-              : t('Manage confirmed plan', '管理已确认的计划')
+            : t('Manage confirmed plan', '管理已确认的计划')
       }
       description={
         editable
@@ -304,6 +333,18 @@ export function EditEventDialog({ entry, onClose }: Props) {
             </>
           )}
 
+          {imagesEditable ? (
+            <>
+              <SubjectStageField
+                field={subjectField}
+                idPrefix="edit-event"
+                categoryName={entry.stageCategoryName}
+                disabled={isSaving}
+              />
+              <ClassificationField field={classificationField} disabled={isSaving} />
+            </>
+          ) : null}
+
           {planned || revertible ? (
             <div className="edit-event__plan-action">
               <button
@@ -335,11 +376,7 @@ export function EditEventDialog({ entry, onClose }: Props) {
           </button>
           {editable || imagesEditable ? (
             <button type="submit" className="button button--primary" disabled={!canSubmit}>
-              {isSaving
-                ? t('Saving…', '正在保存…')
-                : editable
-                  ? t('Save changes', '保存修改')
-                  : t('Save images', '保存图片')}
+              {isSaving ? t('Saving…', '正在保存…') : t('Save changes', '保存修改')}
             </button>
           ) : null}
         </footer>

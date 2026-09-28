@@ -1,0 +1,82 @@
+.classification-manager {
+  display: flex;
+  flex-direction: column;
+}
+
+.classification-manager__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block: var(--space-3);
+  border-bottom: 1px solid var(--rule-faint);
+}
+
+.classification-manager__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.classification-manager__name {
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.classification-manager__options,
+.classification-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  min-width: 0;
+  max-width: 100%;
+  align-items: center;
+}
+
+.classification-manager__options {
+  margin-top: var(--space-2);
+}
+
+.classification-chips .stage-chip {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.classification-chips > span {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.register__row-title .classification-chips {
+  margin-top: var(--space-1);
+}
+
+.classification-replacements {
+  border-top: 1px solid var(--rule);
+  padding-top: var(--space-3);
+}
+
+.classification-field {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.classification-field .stage-picker {
+  margin-top: 0;
+}
+
+.classification-field__clear {
+  color: var(--ink-tertiary);
+  font-size: var(--text-micro);
+}
+
+.journey__classifications {
+  margin-inline-start: auto;
+}
+
+.entry__meta .classification-chips {
+  justify-content: flex-end;
+}

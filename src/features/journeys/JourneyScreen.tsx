@@ -84,6 +84,18 @@ export function JourneyScreen({ journeyId, tab }: { journeyId: string; tab: Jour
    * notes and tasks already do.
    */
   const tallies = useRepoQuery((repo) => repo.registerTallies(journeyId), [journeyId]);
+  const classifications = useRepoQuery(
+    async (repo) => {
+      const [categories, subjects] = await Promise.all([
+        repo.listStateCategories(journeyId),
+        repo.listSubjects(journeyId),
+      ]);
+      return { journeyId, categories, subjects };
+    },
+    [journeyId],
+  );
+  const currentClassifications =
+    classifications.data?.journeyId === journeyId ? classifications.data : undefined;
 
   if (journey.error) {
     return (
@@ -327,6 +339,9 @@ export function JourneyScreen({ journeyId, tab }: { journeyId: string; tab: Jour
               }}
               registers={registerKinds}
               tallies={tallies.data ?? []}
+              categories={currentClassifications?.categories ?? []}
+              subjects={currentClassifications?.subjects ?? []}
+              classificationError={classifications.error}
               onSelectTab={(next) => openJourney(journeyId, next)}
               onOpenNote={openNote}
               onTrackSomething={() => setCreatingRegister(true)}

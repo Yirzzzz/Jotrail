@@ -1,0 +1,11 @@
+.command__item--classified {
+  flex-wrap: wrap;
+}
+
+.command__item--classified .command__item-badge {
+  order: 1;
+  flex: 1 1 100%;
+  min-width: 0;
+  max-width: 100%;
+  padding-inline-start: calc(18px + var(--space-3));
+}

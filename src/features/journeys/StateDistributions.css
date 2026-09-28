@@ -1,0 +1,64 @@
+.state-distribution {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.state-distribution__head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+}
+
+.state-distribution__name,
+.state-distribution__name button {
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.state-distribution__name button {
+  padding: 0;
+  text-align: left;
+}
+
+.state-distribution__name button:hover {
+  color: var(--violet-ink);
+}
+
+.state-distribution__total,
+.state-distribution__note {
+  font-size: var(--text-micro);
+  color: var(--ink-tertiary);
+  overflow-wrap: anywhere;
+}
+
+.state-distribution__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+}
+
+.state-distribution__options li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  max-width: 100%;
+}
+
+.state-distribution__options .stage-chip {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.state-distribution__count {
+  color: var(--ink-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  font-variant-numeric: tabular-nums;
+}

@@ -223,10 +223,15 @@ pub struct SubjectSummary {
     /// been recorded yet. Never stored on the row: a cached current state that
     /// can disagree with its own history is worse than a join.
     pub current_stage: Option<String>,
+    /// Display name of the legacy category, resolved through this subject's register.
+    #[serde(default)]
+    pub stage_category_name: Option<String>,
     /// When that most recent event happened.
     pub last_event_at: Option<String>,
     /// How many events are on record — evidence of movement, not a score.
     pub event_count: i64,
+    #[serde(default)]
+    pub classifications: Vec<EventClassification>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -246,9 +251,13 @@ pub struct TimelineEntry {
     /// event through its subject to the register's set, which is three tables the
     /// UI has no business knowing about.
     pub stage_tone: Option<String>,
+    #[serde(default)]
+    pub stage_category_name: Option<String>,
     /// Attachment metadata only; originals and thumbnails load on demand.
     #[serde(default)]
     pub images: Vec<EventImage>,
+    #[serde(default)]
+    pub classifications: Vec<EventClassification>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -390,6 +399,7 @@ pub struct NewTimelineEvent {
     /// `subject_id` is set — that already names a thing.
     pub new_subject: Option<NewEventSubject>,
     pub images: Option<Vec<EventImageInput>>,
+    pub classifications: Option<Vec<EventClassificationInput>>,
 }
 
 /// A thing to start tracking *while* recording the event that is about it.
@@ -440,6 +450,8 @@ pub struct TimelineEventPatch {
     pub stage: Option<Option<String>>,
     /// Omitted preserves attachments; an empty list removes them all.
     pub images: Option<Vec<EventImageInput>>,
+    /// Only named categories change; an empty option list explicitly clears one.
+    pub classifications: Option<Vec<EventClassificationInput>>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -483,6 +495,8 @@ pub struct StageOption {
     /// groups by recency of movement and the Overview's cross-section by count.
     /// Kept only so a set re-reads in a stable order.
     pub position: i64,
+    #[serde(default)]
+    pub usage_count: i64,
 }
 
 /// A set with its stages, which is how every caller wants it.
@@ -550,6 +564,7 @@ pub struct NewStageOption {
 pub struct StageSetPatch {
     pub name: Option<String>,
     pub options: Option<Vec<StageOptionPatch>>,
+    pub replacements: Option<Vec<OptionReplacement>>,
 }
 
 /// One entry in a set's new list. See `StageSetPatch::options`.
@@ -644,6 +659,74 @@ pub struct ConfirmPlannedEvent {
     #[serde(default, with = "double_option")]
     pub stage: Option<Option<String>>,
     pub images: Option<Vec<EventImageInput>>,
+    pub classifications: Option<Vec<EventClassificationInput>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StateCategory {
+    pub id: String,
+    pub journey_id: String,
+    pub name: String,
+    pub selection_mode: String,
+    pub options: Vec<StateCategoryOption>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StateCategoryOption {
+    pub id: String,
+    pub label: String,
+    pub tone: String,
+    pub usage_count: i64,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NewStateCategory {
+    pub journey_id: String,
+    pub name: String,
+    pub selection_mode: String,
+    pub options: Vec<NewStageOption>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StateCategoryPatch {
+    pub name: Option<String>,
+    pub options: Option<Vec<StageOptionPatch>>,
+    pub replacements: Option<Vec<OptionReplacement>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OptionReplacement {
+    pub from_option_id: String,
+    pub to_option_id: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EventClassificationInput {
+    pub category_id: String,
+    pub option_ids: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EventClassification {
+    pub category_id: String,
+    pub category_name: String,
+    pub selection_mode: String,
+    pub options: Vec<ClassifiedOption>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClassifiedOption {
+    pub id: String,
+    pub label: String,
+    pub tone: String,
 }
 
 /// One to-do recorded alongside an event.

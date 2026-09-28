@@ -108,6 +108,7 @@ interface Props {
   hint?: string;
   /** The chips preview, on by default — it is how a tone choice is checked. */
   showPreview?: boolean;
+  addLabel?: string;
 }
 
 export function StageListEditor({
@@ -116,6 +117,7 @@ export function StageListEditor({
   labelPrefix,
   hint,
   showPreview = true,
+  addLabel,
 }: Props) {
   const { t } = useI18n();
   const prefix = labelPrefix ?? t('Stage', '阶段');
@@ -199,7 +201,7 @@ export function StageListEditor({
         data-autofocus="false"
       >
         <Plus size={13} strokeWidth={2} aria-hidden />
-        {t('Add a stage', '添加阶段')}
+        {addLabel ?? t('Add a stage', '添加阶段')}
       </button>
 
       {hint ? <span className="field__hint">{hint}</span> : null}

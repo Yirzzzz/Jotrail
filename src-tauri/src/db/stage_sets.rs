@@ -31,7 +31,7 @@ use crate::error::{AppError, AppResult};
 /// Rejecting an unknown tone here rather than at the edge is deliberate: the
 /// database is the last place a colour could get in, and a tone that no
 /// stylesheet resolves would render as an invisible border rather than an error.
-fn checked_tone(tone: Option<String>) -> AppResult<String> {
+pub(super) fn checked_tone(tone: Option<String>) -> AppResult<String> {
     match tone {
         None => Ok("neutral".to_string()),
         Some(value) => {
@@ -56,7 +56,7 @@ fn checked_tone(tone: Option<String>) -> AppResult<String> {
 /// label, so two stages sharing one would make "how many are at 一面"
 /// unanswerable. The UNIQUE index would catch it too, but a named error is
 /// better than a constraint violation surfacing in the UI.
-fn checked_labels(labels: &[String]) -> AppResult<Vec<String>> {
+pub(super) fn checked_labels(labels: &[String]) -> AppResult<Vec<String>> {
     let mut seen: Vec<String> = Vec::with_capacity(labels.len());
     for label in labels {
         let trimmed = label.trim();
@@ -89,12 +89,18 @@ fn map_option(row: &Row<'_>) -> rusqlite::Result<StageOption> {
         label: row.get("label")?,
         tone: row.get("tone")?,
         position: row.get("position")?,
+        usage_count: row.get("usage_count")?,
     })
 }
 
 fn options_of(conn: &Connection, set_id: &str) -> AppResult<Vec<StageOption>> {
     let mut stmt = conn.prepare(
-        "SELECT * FROM stage_options WHERE set_id = ?1 ORDER BY position, label COLLATE NOCASE",
+        "SELECT o.*,
+                (SELECT COUNT(*) FROM timeline_events e
+                  JOIN subjects s ON s.id = e.subject_id
+                  JOIN register_stage_sets r ON r.journey_id = s.journey_id AND r.kind = s.kind
+                 WHERE r.set_id = o.set_id AND e.stage = o.label) AS usage_count
+           FROM stage_options o WHERE set_id = ?1 ORDER BY position, label COLLATE NOCASE",
     )?;
     let rows = stmt
         .query_map(params![set_id], map_option)?
@@ -208,13 +214,29 @@ pub fn create(conn: &Connection, input: NewStageSet) -> AppResult<StageSetWithOp
 /// label. Half of that applied would leave things recorded at a stage the set no
 /// longer contains — visible as "off set" rows in the tally, which is a correct
 /// report of a state that should never have been created.
-pub fn update(
-    conn: &Connection,
-    id: &str,
-    patch: StageSetPatch,
-) -> AppResult<StageSetWithOptions> {
-    let existing = get(conn, id)?;
+pub fn update(conn: &Connection, id: &str, patch: StageSetPatch) -> AppResult<StageSetWithOptions> {
     let tx = conn.unchecked_transaction()?;
+    let existing = get(&tx, id)?;
+    if patch.options.is_none()
+        && patch
+            .replacements
+            .as_ref()
+            .is_some_and(|items| !items.is_empty())
+    {
+        return Err(AppError::Invalid(
+            "replacements require an updated option list".into(),
+        ));
+    }
+    let prior_events = stage_events(&tx, id)?;
+    super::state_categories::audit(
+        &tx,
+        "stage_set",
+        id,
+        "update",
+        &serde_json::json!({
+            "stageSet": existing, "events": prior_events
+        }),
+    )?;
 
     if let Some(name) = patch.name.as_deref() {
         let trimmed = name.trim();
@@ -233,7 +255,12 @@ pub fn update(
                 "a stage set needs at least one stage".into(),
             ));
         }
-        replace_options(&tx, &existing, &options)?;
+        replace_options(
+            &tx,
+            &existing,
+            &options,
+            patch.replacements.as_deref().unwrap_or_default(),
+        )?;
     }
 
     tx.execute(
@@ -253,6 +280,7 @@ fn replace_options(
     tx: &rusqlite::Transaction<'_>,
     existing: &StageSetWithOptions,
     incoming: &[StageOptionPatch],
+    replacements: &[crate::domain::OptionReplacement],
 ) -> AppResult<()> {
     let labels = checked_labels(
         &incoming
@@ -271,44 +299,44 @@ fn replace_options(
         .map(|option| (option.id.as_str(), option.label.as_str()))
         .collect();
 
+    let previous = existing
+        .options
+        .iter()
+        .map(|option| (option.id.clone(), option.usage_count))
+        .collect::<Vec<_>>();
+    let replacements = super::state_categories::replacement_map(&previous, incoming, replacements)?;
+    let incoming_labels: HashMap<&str, &str> = incoming
+        .iter()
+        .zip(labels.iter())
+        .filter_map(|(option, label)| option.id.as_deref().map(|id| (id, label.as_str())))
+        .collect();
+    let mut new_label_by_old = HashMap::new();
+    for option in &existing.options {
+        let target_id = replacements
+            .get(&option.id)
+            .map(String::as_str)
+            .unwrap_or(&option.id);
+        if let Some(label) = incoming_labels.get(target_id) {
+            new_label_by_old.insert(option.label.as_str(), *label);
+        }
+    }
+
     /*
      * Which registers use this set. A rename rewrites events, and it must only
      * rewrite events belonging to a register described by *this* set: two
      * registers can legitimately use the word 投稿 under different sets, and
      * renaming one set's 投稿 must not touch the other's.
      */
-    let mut registers = tx.prepare(
-        "SELECT journey_id, kind FROM register_stage_sets WHERE set_id = ?1",
-    )?;
-    let attached = registers
-        .query_map(params![existing.set.id], |row| {
-            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
-        })?
-        .collect::<rusqlite::Result<Vec<_>>>()?;
-
-    // Renames first, while the old labels are still on the events.
-    for (option, label) in incoming.iter().zip(labels.iter()) {
-        let Some(option_id) = option.id.as_deref() else {
-            continue;
-        };
-        let Some(old_label) = previous_label.get(option_id) else {
-            return Err(AppError::Invalid(format!(
-                "stage `{option_id}` does not belong to this set"
-            )));
-        };
-        if old_label == label {
-            continue;
-        }
-
-        for (journey_id, kind) in &attached {
-            tx.execute(
-                "UPDATE timeline_events SET stage = ?1
-                  WHERE stage = ?2
-                    AND subject_id IN (
-                      SELECT id FROM subjects WHERE journey_id = ?3 AND kind = ?4
-                    )",
-                params![label, old_label, journey_id, kind],
-            )?;
+    // Update by original event ID/value, not a sequence of label matches: the
+    // latter corrupts swaps (A→B followed by B→A) and chained label reuse.
+    for (event_id, old_label) in stage_events(tx, &existing.set.id)? {
+        if let Some(label) = new_label_by_old.get(old_label.as_str()) {
+            if *label != old_label {
+                tx.execute(
+                    "UPDATE timeline_events SET stage = ?2 WHERE id = ?1",
+                    params![event_id, label],
+                )?;
+            }
         }
     }
 
@@ -342,6 +370,19 @@ fn replace_options(
     }
 
     Ok(())
+}
+
+fn stage_events(conn: &Connection, set_id: &str) -> AppResult<Vec<(String, String)>> {
+    let mut stmt = conn.prepare(
+        "SELECT e.id, e.stage FROM timeline_events e
+          JOIN subjects s ON s.id = e.subject_id
+          JOIN register_stage_sets r ON r.journey_id = s.journey_id AND r.kind = s.kind
+         WHERE r.set_id = ?1 AND e.stage IS NOT NULL ORDER BY e.seq",
+    )?;
+    let rows = stmt
+        .query_map(params![set_id], |row| Ok((row.get(0)?, row.get(1)?)))?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    Ok(rows)
 }
 
 /// Delete a set. Its attachments go with it; recorded stages stay.
@@ -409,6 +450,20 @@ pub fn for_register(
         None => Ok(None),
         Some(id) => Ok(Some(get(conn, &id)?)),
     }
+}
+
+/// Labels the legacy stage as one named category, not as a privileged status.
+/// Kept batch-shaped because a subject can appear in many timeline entries.
+pub(super) fn names_by_subject(conn: &Connection) -> AppResult<HashMap<String, String>> {
+    let mut stmt = conn.prepare(
+        "SELECT s.id, sets.name FROM subjects s
+          JOIN register_stage_sets r ON r.journey_id = s.journey_id AND r.kind = s.kind
+          JOIN stage_sets sets ON sets.id = r.set_id",
+    )?;
+    let rows = stmt
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+        .collect::<rusqlite::Result<HashMap<_, _>>>()?;
+    Ok(rows)
 }
 
 /// Every register in a Journey, with how many things sit at each stage.

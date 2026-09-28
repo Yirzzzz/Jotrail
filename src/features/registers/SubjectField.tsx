@@ -16,7 +16,7 @@
 import { Layers } from 'lucide-react';
 import { useState } from 'react';
 
-import { StageChip } from '@/components/StageChip';
+import { ClassificationChoice } from './ClassificationField';
 import { useRepoQuery } from '@/data/RepositoryContext';
 import { splitKnownStageFromTitle } from '@/domain/registers';
 import type { NewEventSubjectInput, StageOption, SubjectSummary } from '@/domain/types';
@@ -57,6 +57,7 @@ export interface SubjectFieldState {
   rawNewSubjectKind: string;
   setNewSubjectKind: (value: string) => void;
   stage: string;
+  stageTouched: boolean;
   setStage: (value: string) => void;
   stagesUsed: string[];
   setOptions: StageOption[];
@@ -79,42 +80,57 @@ export function useSubjectField({
   journeyId,
   entryTitle,
   initialSubjectId = '',
+  initialStage,
+  linkedJourneyIds,
 }: {
   journeyId: string | null;
   entryTitle: string;
   initialSubjectId?: string | null;
+  initialStage?: string | null;
+  linkedJourneyIds?: string[];
 }): SubjectFieldState {
   const { t } = useI18n();
   const [subjectId, setSubjectIdRaw] = useState(initialSubjectId ?? '');
   /** `null` follows the title; a string is a name of the user's own (D-050). */
   const [nameChosen, setNameChosen] = useState<string | null>(null);
   /** `null` follows the title in the same way. */
-  const [stageChosen, setStageChosen] = useState<string | null>(null);
+  const [stageChosen, setStageChosen] = useState<string | null>(initialStage ?? null);
+  const [stageTouched, setStageTouched] = useState(false);
   const [kindChosen, setKindChosen] = useState('');
-  const [scope, setScope] = useState(journeyId);
+  const queryScope = JSON.stringify([journeyId, ...(linkedJourneyIds ?? [])]);
+  const [scope, setScope] = useState(queryScope);
 
   // Filing belongs to one Journey. Changing that Journey must not carry a
   // previous film, register or stage into the next event's save payload.
-  if (scope !== journeyId) {
-    setScope(journeyId);
+  if (scope !== queryScope) {
+    setScope(queryScope);
     setSubjectIdRaw('');
     setNameChosen(null);
     setStageChosen(null);
+    setStageTouched(false);
     setKindChosen('');
   }
 
   const registers = useRepoQuery(
     async (repo) => {
+      const ids = [
+        ...new Set(
+          [journeyId, ...(linkedJourneyIds ?? [])].filter((id): id is string => Boolean(id)),
+        ),
+      ];
       const [subjects, kinds] = journeyId
-        ? await Promise.all([repo.listSubjects(journeyId), repo.subjectKinds(journeyId)])
+        ? await Promise.all([
+            Promise.all(ids.map((id) => repo.listSubjects(id))).then((lists) => lists.flat()),
+            repo.subjectKinds(journeyId),
+          ])
         : [[], []];
-      return { journeyId, subjects, kinds };
+      return { scope: queryScope, subjects, kinds };
     },
-    [journeyId],
+    [queryScope],
   );
   // useRepoQuery keeps previous data while refreshing. Only read results from
   // the current scope, including during a slow Journey switch.
-  const current = registers.data?.journeyId === journeyId ? registers.data : undefined;
+  const current = registers.data?.scope === queryScope ? registers.data : undefined;
   const trackable = current?.subjects ?? [];
   const chosenSubject = trackable.find((subject) => subject.id === subjectId) ?? null;
   const isCreating = subjectId === NEW_SUBJECT;
@@ -130,22 +146,23 @@ export function useSubjectField({
 
   // Whose vocabulary applies — the chosen thing's, or the one being joined.
   const activeKind = isCreating ? newSubjectKind : (chosenSubject?.kind ?? '');
+  const activeJourney = chosenSubject?.journeyId ?? journeyId;
 
   const vocabulary = useRepoQuery(
     async (repo) => {
       const [used, set] =
-        journeyId && activeKind
+        activeJourney && activeKind
           ? await Promise.all([
-              repo.subjectStagesUsed(journeyId, activeKind),
-              repo.stageSetForRegister(journeyId, activeKind),
+              repo.subjectStagesUsed(activeJourney, activeKind),
+              repo.stageSetForRegister(activeJourney, activeKind),
             ])
           : [[], null];
-      return { journeyId, kind: activeKind, used, set };
+      return { journeyId: activeJourney, kind: activeKind, used, set };
     },
-    [journeyId, activeKind],
+    [activeJourney, activeKind],
   );
   const currentVocabulary =
-    vocabulary.data?.journeyId === journeyId && vocabulary.data.kind === activeKind
+    vocabulary.data?.journeyId === activeJourney && vocabulary.data.kind === activeKind
       ? vocabulary.data
       : undefined;
   const stagesUsed = currentVocabulary?.used ?? [];
@@ -172,12 +189,10 @@ export function useSubjectField({
 
   const setSubjectId = (value: string) => {
     setSubjectIdRaw(value);
-    /*
-     * Both fields go back to following the title. A stage belongs to a register's
-     * vocabulary, so one typed for a different thing may not exist here — and a
-     * name typed for a different answer is no longer the answer.
-     */
-    setStageChosen(null);
+    // A different item resets its draft. Returning to the original item restores
+    // its stored value, which an untouched confirmation will also preserve.
+    setStageChosen(value === initialSubjectId ? (initialStage ?? null) : null);
+    setStageTouched(false);
     setNameChosen(null);
   };
 
@@ -216,7 +231,7 @@ export function useSubjectField({
   return {
     filing,
     blockedReason,
-    isAvailable: registerKinds.length > 0,
+    isAvailable: registerKinds.length > 0 || trackable.length > 0,
     subjectId,
     setSubjectId,
     trackable,
@@ -230,9 +245,14 @@ export function useSubjectField({
     setNewSubjectKind: (value) => {
       setKindChosen(value);
       setStageChosen(null);
+      setStageTouched(false);
     },
     stage,
-    setStage: setStageChosen,
+    stageTouched,
+    setStage: (value) => {
+      setStageChosen(value);
+      setStageTouched(true);
+    },
     stagesUsed,
     setOptions,
     setName: currentVocabulary?.set?.name ?? null,
@@ -262,8 +282,6 @@ export function SubjectField({
   const { t } = useI18n();
   if (!field.isAvailable) return null;
 
-  const stageListId = `${idPrefix}-stage-options`;
-
   return (
     <div className="field">
       <label className="field__label" htmlFor={`${idPrefix}-subject`}>
@@ -283,7 +301,6 @@ export function SubjectField({
           {field.trackable.map((subject) => (
             <option key={subject.id} value={subject.id}>
               {subject.kind} · {subject.title}
-              {subject.currentStage ? ` (${subject.currentStage})` : ''}
             </option>
           ))}
           {/*
@@ -293,37 +310,14 @@ export function SubjectField({
           */}
           <option value={NEW_SUBJECT}>{t('+ A new one…', '+ 新建一项…')}</option>
         </select>
-
-        {/*
-          The stage, once there is something to be the stage of. Free text with a
-          datalist rather than a fixed dropdown: the vocabulary is whatever has
-          been typed before, and a new stage must always be possible without
-          configuring anything first.
-        */}
-        {field.subjectId && !field.isCreating ? (
-          <>
-            <input
-              className="input"
-              style={{ width: 160 }}
-              list={stageListId}
-              value={field.stage}
-              onChange={(event) => field.setStage(event.target.value)}
-              placeholder={t('Stage', '阶段')}
-              aria-label={t('Stage it reached', '到达的阶段')}
-              autoComplete="off"
-            />
-            <datalist id={stageListId}>
-              {field.stagesUsed.map((used) => (
-                <option key={used} value={used} />
-              ))}
-            </datalist>
-          </>
-        ) : null}
       </div>
 
       {!field.subjectId ? (
         <span className="field__hint">
-          {t('Select or add an item to set its stage.', '选择或新建内容后，可设置状态。')}
+          {t(
+            "Select or add an item to set that item's stage.",
+            '选择或新建内容后，可设置该内容的状态。',
+          )}
         </span>
       ) : null}
 
@@ -374,71 +368,87 @@ export function SubjectField({
               </datalist>
             </div>
           )}
-
-          <div className="field" style={{ width: 160 }}>
-            <label className="field__label" htmlFor={`${idPrefix}-new-subject-stage`}>
-              {t('Stage', '阶段')} <span className="field__hint">{t('Optional', '选填')}</span>
-            </label>
-            <input
-              id={`${idPrefix}-new-subject-stage`}
-              className="input"
-              list={stageListId}
-              value={field.stage}
-              onChange={(event) => field.setStage(event.target.value)}
-              autoComplete="off"
-            />
-            <datalist id={stageListId}>
-              {field.stagesUsed.map((used) => (
-                <option key={used} value={used} />
-              ))}
-            </datalist>
-          </div>
         </div>
-      ) : null}
-
-      {/*
-        The register's own stages, one click each, in their own colours. This is
-        what a defined vocabulary buys at the moment of recording: after the first
-        time a stage is picked rather than retyped or half-remembered.
-
-        Listed in the order the set was written in, which carries no meaning beyond
-        being stable — a stage is a label, not a step. The text field stays
-        available on purpose: a stage outside the set has to remain writable.
-      */}
-      {field.subjectId && field.setOptions.length > 0 ? (
-        <div
-          className="stage-picker"
-          role="group"
-          aria-label={t('Stages in this register', '此清单中的阶段')}
-        >
-          {field.setOptions.map((option) => {
-            const isChosen = field.stage.trim() === option.label;
-            return (
-              <button
-                key={option.id}
-                type="button"
-                className="stage-picker__option"
-                aria-pressed={isChosen}
-                // Clicking the chosen stage clears it, so a mis-click is undoable
-                // without reaching for the text field.
-                onClick={() => field.setStage(isChosen ? '' : option.label)}
-                data-autofocus="false"
-              >
-                <StageChip label={option.label} tone={option.tone} />
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
-
-      {field.subjectId && !field.isCreating && field.chosenSubject?.currentStage ? (
-        <span className="field__hint">
-          {t(
-            `Current stage: ${field.chosenSubject.currentStage}`,
-            `当前阶段：${field.chosenSubject.currentStage}`,
-          )}
-        </span>
       ) : null}
     </div>
+  );
+}
+
+/** The register's vocabulary is a named peer of every other category. */
+export function SubjectStageField({
+  field,
+  idPrefix,
+  categoryName,
+  disabled = false,
+}: {
+  field: SubjectFieldState;
+  idPrefix: string;
+  categoryName?: string | null;
+  disabled?: boolean;
+}) {
+  const { t } = useI18n();
+  const [other, setOther] = useState(false);
+  const scope = `${field.subjectId}:${field.setName ?? ''}`;
+  const [previousScope, setPreviousScope] = useState(scope);
+  if (previousScope !== scope) {
+    setPreviousScope(scope);
+    setOther(false);
+  }
+  if (!field.subjectId && !field.stage) return null;
+  const name = field.setName ?? categoryName ?? t('State', '状态');
+  const options = field.setOptions.map((option) => ({ ...option, id: option.label }));
+  const value = field.stage.trim();
+  const offSet = value !== '' && !options.some((option) => option.label === value);
+  const hasSubject = Boolean(field.subjectId);
+  const inputVisible = hasSubject && (options.length === 0 || other || offSet);
+  const inputId = `${idPrefix}-stage`;
+  const listId = `${idPrefix}-stage-options`;
+
+  return (
+    <ClassificationChoice
+      name={name}
+      options={hasSubject ? options : []}
+      selected={value ? [value] : []}
+      disabled={disabled}
+      onToggle={(label) => {
+        field.setStage(value === label ? '' : label);
+        setOther(false);
+      }}
+      onClear={() => {
+        field.setStage('');
+        setOther(false);
+      }}
+    >
+      {!hasSubject ? <span className="field__hint">{field.stage}</span> : null}
+      {hasSubject && options.length > 0 ? (
+        <button
+          type="button"
+          className="button classification-field__clear"
+          aria-expanded={inputVisible}
+          onClick={() => setOther(!inputVisible)}
+          data-autofocus="false"
+        >
+          {t('Other…', '其他…')}
+        </button>
+      ) : null}
+      {inputVisible ? (
+        <>
+          <input
+            id={inputId}
+            className="input"
+            value={field.stage}
+            list={listId}
+            onChange={(event) => field.setStage(event.target.value)}
+            aria-label={name}
+            autoComplete="off"
+          />
+          <datalist id={listId}>
+            {field.stagesUsed.map((used) => (
+              <option key={used} value={used} />
+            ))}
+          </datalist>
+        </>
+      ) : null}
+    </ClassificationChoice>
   );
 }

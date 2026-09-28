@@ -8,14 +8,15 @@ use tauri::State;
 
 use crate::db::timeline::SortOrder;
 use crate::db::{
-    event_images, journeys, maintenance, notes, stage_sets, subjects, tasks, timeline,
+    event_images, journeys, maintenance, notes, stage_sets, state_categories, subjects, tasks,
+    timeline,
 };
 use crate::domain::{
     ConfirmPlannedEvent, EventImageVariant, Journey, JourneyPatch, JourneyStatus, NewJourney,
-    NewNote, NewStageSet, NewSubject, NewTask, NewTimelineEvent, NotePatch, NoteWithLinks,
-    RegisterTally, StageSetPatch, StageSetWithOptions, Subject, SubjectPatch, SubjectSummary,
-    TaskStatus, TaskWithLinks, TimelineEntry, TimelineEventPatch, TimelineEventState,
-    TimelineImportance,
+    NewNote, NewStageSet, NewStateCategory, NewSubject, NewTask, NewTimelineEvent, NotePatch,
+    NoteWithLinks, RegisterTally, StageSetPatch, StageSetWithOptions, StateCategory,
+    StateCategoryPatch, Subject, SubjectPatch, SubjectSummary, TaskStatus, TaskWithLinks,
+    TimelineEntry, TimelineEventPatch, TimelineEventState, TimelineImportance,
 };
 use crate::error::{AppError, AppResult};
 use crate::AppState;
@@ -485,6 +486,11 @@ fn create_timeline_event(db: &Connection, input: NewTimelineEvent) -> AppResult<
             "Images can only be attached to an explicit event".into(),
         ));
     }
+    if input.classifications.is_some() && !timeline::can_edit_images(&event) {
+        return Err(AppError::Invalid(
+            "Classifications can only be attached to an explicit event".into(),
+        ));
+    }
 
     let journey_ids = input.journey_ids.unwrap_or_default();
     for journey_id in &journey_ids {
@@ -517,6 +523,9 @@ fn create_timeline_event(db: &Connection, input: NewTimelineEvent) -> AppResult<
     }
 
     timeline::insert_event(&tx, &event, &journey_ids)?;
+    if let Some(classifications) = input.classifications {
+        state_categories::replace_within(&tx, &event.id, &classifications)?;
+    }
     if let Some(images) = input.images {
         event_images::replace_within(&tx, &event.id, &images)?;
     }
@@ -673,6 +682,34 @@ pub fn subject_propose(
 pub fn stage_sets_list(state: State<'_, AppState>) -> AppResult<Vec<StageSetWithOptions>> {
     let db = conn(&state)?;
     stage_sets::list(&db)
+}
+
+#[tauri::command]
+pub fn state_categories_list(
+    state: State<'_, AppState>,
+    journey_id: String,
+) -> AppResult<Vec<StateCategory>> {
+    let db = conn(&state)?;
+    state_categories::list(&db, &journey_id)
+}
+
+#[tauri::command]
+pub fn state_category_create(
+    state: State<'_, AppState>,
+    input: NewStateCategory,
+) -> AppResult<StateCategory> {
+    let db = conn(&state)?;
+    state_categories::create(&db, input)
+}
+
+#[tauri::command]
+pub fn state_category_update(
+    state: State<'_, AppState>,
+    id: String,
+    patch: StateCategoryPatch,
+) -> AppResult<StateCategory> {
+    let db = conn(&state)?;
+    state_categories::update(&db, &id, patch)
 }
 
 /// Create a set and its stages in one call. A set with no stages is refused —

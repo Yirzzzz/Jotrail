@@ -394,13 +394,26 @@ pub fn list(
             Ok(SubjectSummary {
                 subject: map_subject(row)?,
                 current_stage: row.get("current_stage")?,
+                stage_category_name: None,
                 last_event_at: row.get("last_event_at")?,
                 event_count: row.get("event_count")?,
+                classifications: Vec::new(),
             })
         })?
         .collect::<rusqlite::Result<Vec<_>>>()?;
 
-    Ok(rows)
+    let mut classifications = super::state_categories::by_subject(conn)?;
+    let mut stage_names = super::stage_sets::names_by_subject(conn)?;
+    Ok(rows
+        .into_iter()
+        .map(|mut subject| {
+            subject.stage_category_name = stage_names.remove(&subject.subject.id);
+            subject.classifications = classifications
+                .remove(&subject.subject.id)
+                .unwrap_or_default();
+            subject
+        })
+        .collect())
 }
 
 /// Which registers a Journey has, and how many things are in each.
@@ -486,13 +499,26 @@ pub fn search(conn: &Connection, needle: &str) -> AppResult<Vec<SubjectSummary>>
             Ok(SubjectSummary {
                 subject: map_subject(row)?,
                 current_stage: row.get("current_stage")?,
+                stage_category_name: None,
                 last_event_at: row.get("last_event_at")?,
                 event_count: row.get("event_count")?,
+                classifications: Vec::new(),
             })
         })?
         .collect::<rusqlite::Result<Vec<_>>>()?;
 
-    Ok(rows)
+    let mut classifications = super::state_categories::by_subject(conn)?;
+    let mut stage_names = super::stage_sets::names_by_subject(conn)?;
+    Ok(rows
+        .into_iter()
+        .map(|mut subject| {
+            subject.stage_category_name = stage_names.remove(&subject.subject.id);
+            subject.classifications = classifications
+                .remove(&subject.subject.id)
+                .unwrap_or_default();
+            subject
+        })
+        .collect())
 }
 
 /// The stage a subject was at *before* a given moment.

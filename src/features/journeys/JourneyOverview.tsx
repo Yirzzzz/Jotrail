@@ -17,13 +17,14 @@ import { ArrowRight, CircleDot, Flag, Layers, Pin, Plus } from 'lucide-react';
 
 import { StatusPill } from '@/components/StatusPill';
 import { currentFocus, developmentSpine, trackedStates } from '@/domain/development';
-import { crossSection } from '@/domain/registers';
 import { eventTypeLabel, formatStateValue, onlyHappened } from '@/domain/timeline';
 import type {
   Journey,
   JourneyStatus,
   NoteWithLinks,
   RegisterTally,
+  StateCategory,
+  SubjectSummary,
   TimelineEntry,
 } from '@/domain/types';
 import { JOURNEY_STATUSES } from '@/domain/types';
@@ -31,8 +32,8 @@ import { formatFullDate, formatRelativeDay } from '@/lib/datetime';
 import { useI18n } from '@/lib/i18n';
 import { statusLabel } from '@/components/StatusPill';
 import type { JourneyTab } from '@/app/store';
-import { StageCrossSection } from '@/features/registers/StageCrossSection';
 import { LatestProgress } from './LatestProgress';
+import { StateDistributions } from './StateDistributions';
 
 interface Props {
   journey: Journey;
@@ -46,6 +47,9 @@ interface Props {
    * tracks nothing, which is most of them.
    */
   tallies?: RegisterTally[];
+  categories?: StateCategory[];
+  subjects?: SubjectSummary[];
+  classificationError?: string | null;
   onSelectTab: (tab: JourneyTab) => void;
   onOpenNote: (noteId: string) => void;
   onStatusChange: (status: JourneyStatus) => Promise<void>;
@@ -60,6 +64,9 @@ export function JourneyOverview({
   counts,
   registers = [],
   tallies = [],
+  categories = [],
+  subjects = [],
+  classificationError,
   onSelectTab,
   onOpenNote,
   onStatusChange,
@@ -89,14 +96,6 @@ export function JourneyOverview({
     .filter((entry) => entry.importance === 'milestone')
     .sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
   const pinned = notes.filter((note) => note.pinnedIn.includes(journey.id));
-  /*
-   * Registers with nothing in them at all are dropped: a bar for an empty
-   * register would be a heading over nothing, and the register's own tab already
-   * says it is empty.
-   */
-  const crossSections = tallies
-    .filter((tally) => tally.total > 0)
-    .map((tally) => crossSection(tally));
 
   return (
     <div className="overview">
@@ -177,22 +176,17 @@ export function JourneyOverview({
         so independent counts side by side, biggest first, is the honest shape
         (D-007, D-043, AGENTS.md §7).
       */}
-      {crossSections.length > 0 ? (
-        <section>
-          <h2 className="section-label overview__section-title">
-            {t('Where things stand', '当前进展')}
-          </h2>
-          <div className="overview__cross-sections">
-            {crossSections.map((section) => (
-              <StageCrossSection
-                key={section.kind}
-                section={section}
-                onOpen={() => onSelectTab({ register: section.kind })}
-              />
-            ))}
-          </div>
-        </section>
+      {classificationError ? (
+        <p className="error-banner" role="alert">
+          {classificationError}
+        </p>
       ) : null}
+      <StateDistributions
+        tallies={tallies}
+        categories={categories}
+        subjects={subjects}
+        onOpenRegister={(kind) => onSelectTab({ register: kind })}
+      />
 
       {/*
         The reference shows Papers/Projects/Skills here. Those are per-journey

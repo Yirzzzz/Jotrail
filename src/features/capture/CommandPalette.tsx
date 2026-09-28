@@ -15,18 +15,19 @@ import { CalendarClock, FileText, Layers, Plus, Search, SquareCheck } from 'luci
 
 import { JourneyIcon } from '@/components/JourneyIcon';
 import { Modal } from '@/components/Modal';
-import { StageChip } from '@/components/StageChip';
+import { ClassificationChips } from '@/features/registers/ClassificationField';
 import { useInvalidate, useRepoQuery, useRepository } from '@/data/RepositoryContext';
 import { formatRelativeDay } from '@/lib/datetime';
 import { useI18n } from '@/lib/i18n';
 import { useAppStore } from '@/app/store';
 import { TaskDetailsDialog } from './TaskDetailsDialog';
+import './CommandPalette.css';
 
 interface Item {
   key: string;
   label: string;
   hint?: string;
-  /** Rendered after the label — a stage chip, when the hit has one. */
+  /** Peer category chips shown below the result's title. */
   badge?: React.ReactNode;
   icon: React.ReactNode;
   /** Task details replace the search dialog without closing its overlay. */
@@ -86,9 +87,20 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
       key: `subject-${thing.id}`,
       label: thing.title,
       hint: thing.kind,
-      badge: thing.currentStage ? (
-        <StageChip label={thing.currentStage} tone={null} />
-      ) : undefined,
+      badge:
+        thing.currentStage || thing.classifications.some((group) => group.options.length) ? (
+          <ClassificationChips
+            classifications={thing.classifications}
+            legacy={
+              thing.currentStage
+                ? {
+                    label: thing.currentStage,
+                    name: thing.stageCategoryName,
+                  }
+                : undefined
+            }
+          />
+        ) : undefined,
       icon: <Layers size={15} strokeWidth={1.75} aria-hidden />,
       run: () => openJourney(thing.journeyId, { register: thing.kind }),
     }));
@@ -146,9 +158,21 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
         key: `entry-${entry.id}`,
         label: entry.title,
         hint: formatRelativeDay(entry.occurredAt),
-        badge: entry.stage ? (
-          <StageChip label={entry.stage} tone={entry.stageTone} />
-        ) : undefined,
+        badge:
+          entry.stage || entry.classifications.some((group) => group.options.length) ? (
+            <ClassificationChips
+              classifications={entry.classifications}
+              legacy={
+                entry.stage
+                  ? {
+                      label: entry.stage,
+                      tone: entry.stageTone,
+                      name: entry.stageCategoryName,
+                    }
+                  : undefined
+              }
+            />
+          ) : undefined,
         icon: <CalendarClock size={15} strokeWidth={1.75} aria-hidden />,
         keepOpen: entry.sourceType === 'task' && Boolean(entry.sourceId),
         run: () => {
@@ -286,7 +310,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
             <button
               key={item.key}
               type="button"
-              className="command__item"
+              className={`command__item${item.badge ? ' command__item--classified' : ''}`}
               data-active={index === activeIndex}
               onMouseEnter={() => setActiveIndex(index)}
               onClick={() => runItem(item)}

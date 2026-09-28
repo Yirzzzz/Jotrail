@@ -16,6 +16,7 @@ import type {
   NewJourneyInput,
   NewNoteInput,
   NewStageSetInput,
+  NewStateCategoryInput,
   NewSubjectInput,
   NewTaskInput,
   NewTimelineEventInput,
@@ -25,6 +26,8 @@ import type {
   RegisterTally,
   StageSetPatch,
   StageSetWithOptions,
+  StateCategory,
+  StateCategoryPatch,
   Subject,
   SubjectPatch,
   SubjectSummary,
@@ -175,6 +178,11 @@ export interface Repository {
    * cross-section. Counts only; a register has no completion (D-007).
    */
   registerTallies(journeyId: string): Promise<RegisterTally[]>;
+
+  // Independent Journey classifications. Shared legacy stages remain above.
+  listStateCategories(journeyId: string): Promise<StateCategory[]>;
+  createStateCategory(input: NewStateCategoryInput): Promise<StateCategory>;
+  updateStateCategory(id: string, patch: StateCategoryPatch): Promise<StateCategory>;
 
   // App
   appInfo(): Promise<AppInfo>;

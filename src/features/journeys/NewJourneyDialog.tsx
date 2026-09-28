@@ -83,7 +83,11 @@ export function NewJourneyDialog({ onClose, onCreated }: Props) {
   const availableSets = stageSets.data ?? [];
   const reusedSet = availableSets.find((set) => set.id === reusedSetId) ?? null;
 
-  const canSubmit = title.trim().length > 0 && !isSaving;
+  const missingKind =
+    isTracking &&
+    !kind.trim() &&
+    (firstItem.trim().length > 0 || namedStages(stages).length > 0 || Boolean(reusedSet));
+  const canSubmit = title.trim().length > 0 && !missingKind && !isSaving;
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -317,6 +321,11 @@ export function NewJourneyDialog({ onClose, onCreated }: Props) {
         </div>
 
         <footer className="modal__footer">
+          {missingKind ? (
+            <span className="modal__footer-hint">
+              {t('Name the kind of thing to save its states', '请填写内容类型以保存状态')}
+            </span>
+          ) : null}
           <button type="button" className="button" onClick={onClose} data-autofocus="false">
             {t('Cancel', '取消')}
           </button>

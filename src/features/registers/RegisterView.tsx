@@ -1,5 +1,5 @@
 /**
- * One register: the things of a kind in a Journey, grouped by where each stands.
+ * One register: tracked things with every state category shown as a peer.
  *
  * This is the 图鉴 view. What makes it honest is that **every column but the name
  * is derived from events** — the stage is the last one recorded, the count is a
@@ -15,12 +15,12 @@ import { useState } from 'react';
 import { CalendarClock, Layers, Palette, Plus, Sparkles } from 'lucide-react';
 
 import { useInvalidate, useRepoQuery, useRepository } from '@/data/RepositoryContext';
-import { StageChip } from '@/components/StageChip';
-import { groupByStage, registerTally } from '@/domain/registers';
+import { registerTally } from '@/domain/registers';
 import type { SubjectSummary } from '@/domain/types';
 import { formatRelativeDay } from '@/lib/datetime';
 import { useI18n } from '@/lib/i18n';
-import { StageSetPicker } from './StageSetPicker';
+import { ClassificationManager } from './ClassificationManager';
+import { ClassificationChips } from './ClassificationField';
 import './Register.css';
 
 interface Props {
@@ -63,9 +63,6 @@ export function RegisterView({ journeyId, kind, onOpenSubject }: Props) {
   const rows = subjects.data ?? [];
   const set = stageSet.data ?? null;
   const tally = registerTally(rows);
-  // With a set the groups follow its order and empty stages still appear; without
-  // one, by recency, exactly as before.
-  const groups = groupByStage(rows, set?.options ?? []);
   const unfiled = proposals.data ?? [];
 
   const add = async (event: React.FormEvent) => {
@@ -88,34 +85,25 @@ export function RegisterView({ journeyId, kind, onOpenSubject }: Props) {
 
   return (
     <div className="register">
-      {/*
-        Counts, not a score. "9 tracked · 7 with something recorded · 4 stages" is
-        arithmetic on real rows; a percentage would be the invented progress
-        D-007 exists to refuse.
-      */}
+      {/* Counts of tracked items and recorded history, without ranking categories. */}
       <div className="register__tally">
         <span className="meta-text">
           {tally.total === 0
             ? t('Nothing tracked yet', '还没有清单内容')
             : t(
-                `${tally.total} tracked · ${tally.withEvents} with something recorded · ${tally.stages} ${
-                  tally.stages === 1 ? 'stage' : 'stages'
-                }`,
-                `共 ${tally.total} 项 · ${tally.withEvents} 项已有记录 · ${tally.stages} 个阶段`,
+                `${tally.total} tracked · ${tally.withEvents} with something recorded`,
+                `共 ${tally.total} 项 · ${tally.withEvents} 项已有记录`,
               )}
         </span>
 
-        {/*
-          The way into the vocabulary. Named after the set once there is one, so
-          the control says what it will open rather than what it does.
-        */}
+        {/* All state vocabularies share one management entry. */}
         <button
           type="button"
           className="button register__stages-button"
           onClick={() => setPickingStages(true)}
         >
           <Palette size={13} strokeWidth={2} aria-hidden />
-          {set ? set.name : t('Set up stages', '设置阶段')}
+          {t('Manage categories', '管理分类')}
         </button>
       </div>
 
@@ -206,105 +194,74 @@ export function RegisterView({ journeyId, kind, onOpenSubject }: Props) {
           </div>
           <p>
             {t(
-              'Add something above, then record events about it. Each thing’s stage is whatever its most recent event says — nothing to keep in sync by hand.',
-              '在上方添加一项内容，然后记录与它有关的事件。阶段以最近的事件为准，无需手动同步。',
+              'Add something above, then record events about it. Its categories follow your recorded history.',
+              '在上方添加内容，再记录与它有关的事件。各类状态会随记录更新。',
             )}
           </p>
         </div>
       ) : (
-        groups.map((group) => (
-          <section key={group.stage ?? '\u0000none'} className="register__group">
-            <header className="register__group-head">
-              {/*
-                The stage in its own tone when the set names it, so the colour the
-                user chose is what marks the section — and the name is inside the
-                chip, so the heading still reads without it.
-              */}
-              <h3 className="section-label">
-                {group.stage === null ? (
-                  t('Nothing recorded yet', '还没有记录')
-                ) : group.tone ? (
-                  <StageChip label={group.stage} tone={group.tone} />
-                ) : (
-                  <StageChip
-                    label={group.stage}
-                    offSet={set !== null}
-                    title={
-                      set
-                        ? t(
-                            `Recorded, but not one of ${set.name}'s stages`,
-                            `已记录，但不属于${set.name}中的阶段`,
-                          )
+        <ul className="register__rows">
+          {rows.map((subject) => (
+            <li key={subject.id}>
+              <button
+                type="button"
+                className="register__row"
+                onClick={() => onOpenSubject(subject)}
+                aria-label={t(`Open ${subject.title}`, `打开 ${subject.title}`)}
+              >
+                <span className="register__row-icon" aria-hidden>
+                  <Layers size={14} strokeWidth={2} />
+                </span>
+                <span className="register__row-title selectable">
+                  {subject.title}
+                  <ClassificationChips
+                    classifications={subject.classifications}
+                    legacy={
+                      subject.currentStage
+                        ? {
+                            label: subject.currentStage,
+                            name: subject.stageCategoryName,
+                            tone: set?.options.find(
+                              (option) => option.label === subject.currentStage,
+                            )?.tone,
+                            offSet:
+                              set !== null &&
+                              !set.options.some(
+                                (option) => option.label === subject.currentStage,
+                              ),
+                          }
                         : undefined
                     }
                   />
-                )}
-              </h3>
-              <span className="register__group-count">{group.subjects.length}</span>
-              <span className="register__group-rule" aria-hidden />
-            </header>
-
-            {/*
-              A stage of the set with nothing at it. Kept rather than hidden: "is
-              anything at 大修" is a real question, and a visible zero is the answer
-              that a derived vocabulary could never give.
-            */}
-            {group.subjects.length === 0 ? (
-              <p className="register__group-empty">
-                {t('Nothing here yet.', '这里还没有内容。')}
-              </p>
-            ) : null}
-
-            <ul className="register__rows">
-              {group.subjects.map((subject) => (
-                <li key={subject.id}>
-                  <button
-                    type="button"
-                    className="register__row"
-                    onClick={() => onOpenSubject(subject)}
-                    aria-label={t(`Open ${subject.title}`, `打开 ${subject.title}`)}
-                  >
-                    <span className="register__row-icon" aria-hidden>
-                      <Layers size={14} strokeWidth={2} />
-                    </span>
-                    <span className="register__row-title selectable">{subject.title}</span>
-                    <span className="register__row-meta">
-                      {subject.eventCount > 0 ? (
-                        <>
-                          <span className="register__row-count">
-                            {t(
-                              `${subject.eventCount} ${subject.eventCount === 1 ? 'entry' : 'entries'}`,
-                              `${subject.eventCount} 条记录`,
-                            )}
-                          </span>
-                          {subject.lastEventAt ? (
-                            <span className="register__row-when">
-                              <CalendarClock size={11} strokeWidth={2} aria-hidden />
-                              {formatRelativeDay(subject.lastEventAt)}
-                            </span>
-                          ) : null}
-                        </>
-                      ) : (
+                </span>
+                <span className="register__row-meta">
+                  {subject.eventCount > 0 ? (
+                    <>
+                      <span className="register__row-count">
+                        {t(
+                          `${subject.eventCount} ${subject.eventCount === 1 ? 'entry' : 'entries'}`,
+                          `${subject.eventCount} 条记录`,
+                        )}
+                      </span>
+                      {subject.lastEventAt ? (
                         <span className="register__row-when">
-                          {t('Not started', '尚未开始')}
+                          <CalendarClock size={11} strokeWidth={2} aria-hidden />
+                          {formatRelativeDay(subject.lastEventAt)}
                         </span>
-                      )}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))
+                      ) : null}
+                    </>
+                  ) : (
+                    <span className="register__row-when">{t('Not started', '尚未开始')}</span>
+                  )}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
 
       {isPickingStages ? (
-        <StageSetPicker
-          journeyId={journeyId}
-          kind={kind}
-          current={set}
-          onClose={() => setPickingStages(false)}
-        />
+        <ClassificationManager journeyId={journeyId} onClose={() => setPickingStages(false)} />
       ) : null}
     </div>
   );

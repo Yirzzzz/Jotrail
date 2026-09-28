@@ -156,6 +156,10 @@ export interface Subject {
  * rather than stored twice, so it can never disagree with its own history.
  */
 export interface SubjectSummary extends Subject {
+  /** Name of the legacy vocabulary; displayed as a peer of all categories. */
+  stageCategoryName: string | null;
+  /** Latest recorded selection in each independent Journey category. */
+  classifications: EventClassification[];
   /** The `stage` of its most recent event; `null` until something is recorded. */
   currentStage: string | null;
   lastEventAt: string | null;
@@ -191,6 +195,9 @@ export interface EventImage {
 export type EventImageInput = { id: string } | { fileName: string; dataBase64: string };
 
 export interface TimelineEntry extends TimelineEvent {
+  /** Resolved legacy category name, never an implicit primary classification. */
+  stageCategoryName: string | null;
+  classifications: EventClassification[];
   images: EventImage[];
   journeys: JourneyRef[];
   /**
@@ -258,6 +265,8 @@ export interface NotePatch {
  * `null` clears a field; leaving the key off leaves it alone.
  */
 export interface TimelineEventPatch {
+  /** Omitted groups stay unchanged; an empty optionIds list explicitly clears a group. */
+  classifications?: EventClassificationInput[];
   /** Omitted preserves images; an empty list removes all attachments. */
   images?: EventImageInput[];
   title?: string;
@@ -290,6 +299,7 @@ export interface NewTaskInput {
 }
 
 export interface NewTimelineEventInput {
+  classifications?: EventClassificationInput[];
   /** Imported and validated in the same transaction as the event. */
   images?: EventImageInput[];
   eventType?: string;
@@ -435,6 +445,8 @@ export interface StageOption {
    * order rather than reshuffling its own rows between saves.
    */
   position: number;
+  /** Recorded and planned events using this option across all attached registers. */
+  usageCount: number;
 }
 
 export interface StageSetWithOptions extends StageSet {
@@ -465,12 +477,62 @@ export interface NewStageOptionInput {
 export interface StageSetPatch {
   name?: string;
   options?: StageOptionPatch[];
+  replacements?: StateOptionReplacement[];
 }
 
 export interface StageOptionPatch {
   id?: string;
   label: string;
   tone?: StageTone;
+}
+
+/** Independent, optional, finite vocabularies owned by one Journey. */
+export type StateSelectionMode = 'single' | 'multiple';
+
+export interface StateCategoryOption {
+  id: string;
+  label: string;
+  tone: string;
+  usageCount: number;
+}
+
+export interface StateCategory {
+  id: string;
+  journeyId: string;
+  name: string;
+  selectionMode: StateSelectionMode;
+  options: StateCategoryOption[];
+}
+
+export interface NewStateCategoryInput {
+  journeyId: string;
+  name: string;
+  selectionMode: StateSelectionMode;
+  options: NewStageOptionInput[];
+}
+
+export interface StateOptionReplacement {
+  fromOptionId: string;
+  toOptionId: string;
+}
+
+export interface StateCategoryPatch {
+  name?: string;
+  options?: StageOptionPatch[];
+  replacements?: StateOptionReplacement[];
+}
+
+export interface EventClassificationInput {
+  categoryId: string;
+  /** Empty means an intentional clear, not an omitted update. */
+  optionIds: string[];
+}
+
+export interface EventClassification {
+  categoryId: string;
+  categoryName: string;
+  selectionMode: StateSelectionMode;
+  options: { id: string; label: string; tone: string }[];
 }
 
 /** How many things sit at one stage. Counts, never percentages (D-007). */
@@ -512,6 +574,7 @@ export interface RegisterTally {
  * together.
  */
 export interface ConfirmPlannedEventInput {
+  classifications?: EventClassificationInput[];
   /** Omitted keeps the planned event's images. */
   images?: EventImageInput[];
   /** When it actually happened. Defaults to now on the Rust side. */

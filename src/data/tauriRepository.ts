@@ -16,6 +16,7 @@ import type {
   NewJourneyInput,
   NewNoteInput,
   NewStageSetInput,
+  NewStateCategoryInput,
   NewSubjectInput,
   NewTaskInput,
   NewTimelineEventInput,
@@ -25,6 +26,8 @@ import type {
   RegisterTally,
   StageSetPatch,
   StageSetWithOptions,
+  StateCategory,
+  StateCategoryPatch,
   Subject,
   SubjectPatch,
   SubjectSummary,
@@ -125,6 +128,13 @@ export function createTauriRepository(): Repository {
     stageSetForRegister: (journeyId, kind) =>
       invoke<StageSetWithOptions | null>('stage_set_for_register', { journeyId, kind }),
     registerTallies: (journeyId) => invoke<RegisterTally[]>('register_tallies', { journeyId }),
+
+    listStateCategories: (journeyId) =>
+      invoke<StateCategory[]>('state_categories_list', { journeyId }),
+    createStateCategory: (input: NewStateCategoryInput) =>
+      invoke<StateCategory>('state_category_create', { input }),
+    updateStateCategory: (id, patch: StateCategoryPatch) =>
+      invoke<StateCategory>('state_category_update', { id, patch }),
 
     appInfo: () => invoke<AppInfo>('app_info'),
     listBackups: () => invoke<BackupInfo[]>('backups_list'),

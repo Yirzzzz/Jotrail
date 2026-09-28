@@ -20,7 +20,6 @@ import {
   FileText,
   Flag,
   Lightbulb,
-  ImagePlus,
   Pencil,
   RotateCcw,
   Sparkles,
@@ -29,7 +28,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 
 import { JourneyIcon } from '@/components/JourneyIcon';
-import { StageChip, stageToneStyle } from '@/components/StageChip';
+import { ClassificationChips } from '@/features/registers/ClassificationField';
 import {
   canRevertConfirmation,
   canEditEventImages,
@@ -120,24 +119,12 @@ export function TimelineEntryView({
     // The dashed edge that says "not yet true", and its overdue variant.
     planned ? 'entry--planned' : '',
     planned && isOverdue(entry) ? 'entry--overdue' : '',
-    // A staged entry takes its stage's colour on the left edge.
-    entry.stageTone ? 'entry--staged' : '',
   ]
     .filter(Boolean)
     .join(' ');
 
-  /*
-   * The pen, plus the stage tone when there is one.
-   *
-   * Both are custom properties on the same element, and they do not compete: the
-   * pen colours the chip and the milestone cap (which Journey this belongs to),
-   * while the stage tone colours only the left edge (what state the thing it is
-   * about reached). Keeping them on separate marks is what stops a timeline of
-   * staged entries from losing its channel identity.
-   */
-  const entryStyle = entry.stageTone
-    ? { ...channelPen, ...stageToneStyle(entry.stageTone) }
-    : channelPen;
+  // A category colours only its own label; no category owns the event frame.
+  const entryStyle = channelPen;
 
   const content =
     density === 'compact' ? (
@@ -181,6 +168,23 @@ export function TimelineEntryView({
   );
 }
 
+function EntryClassifications({ entry }: { entry: TimelineEntry }) {
+  return (
+    <ClassificationChips
+      classifications={entry.classifications}
+      legacy={
+        entry.stage
+          ? {
+              label: entry.stage,
+              tone: entry.stageTone,
+              name: entry.stageCategoryName,
+            }
+          : undefined
+      }
+    />
+  );
+}
+
 function EventActionsButton({
   entry,
   onEdit,
@@ -194,9 +198,9 @@ function EventActionsButton({
   const label = editable
     ? t(`Edit ${entry.title}`, `编辑 ${entry.title}`)
     : canEditEventImages(entry) && !canRevertConfirmation(entry)
-      ? t(`Edit images for ${entry.title}`, `编辑 ${entry.title} 的图片`)
+      ? t(`Edit details for ${entry.title}`, `编辑 ${entry.title} 的分类与图片`)
       : t(`Manage ${entry.title}`, `管理 ${entry.title}`);
-  const Icon = editable ? Pencil : canRevertConfirmation(entry) ? RotateCcw : ImagePlus;
+  const Icon = canRevertConfirmation(entry) && !editable ? RotateCcw : Pencil;
   return (
     <button
       type="button"
@@ -237,6 +241,7 @@ function CompactBody({
         </div>
         <div className="entry__meta">
           <span className="entry__time">{formatTimeOfDay(entry.occurredAt)}</span>
+          <EntryClassifications entry={entry} />
         </div>
       </div>
       {entry.images.length > 0 ? (
@@ -301,7 +306,7 @@ function FullBody({
               Keep the time and stage together at the trailing edge. The header
               can wrap as a whole inside a narrow timeline or history dialog.
             */}
-            {entry.stage ? <StageChip label={entry.stage} tone={entry.stageTone} /> : null}
+            <EntryClassifications entry={entry} />
             {/*
               On a commitment the badge says what it *is* rather than what kind of
               event it will become: "Planned", or "Overdue" once its date has gone

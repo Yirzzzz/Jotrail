@@ -15,7 +15,17 @@
  * per-journey custom views (AGENTS.md §7, DECISIONS.md D-003).
  */
 
-import { CalendarRange, Clock3, FileText, LayoutGrid, Layers, SquareCheck } from 'lucide-react';
+import {
+  CalendarRange,
+  Clock3,
+  FileText,
+  LayoutGrid,
+  Layers,
+  SquareCheck,
+  Tags,
+} from 'lucide-react';
+import { useState } from 'react';
+import { ClassificationManager } from '@/features/registers/ClassificationManager';
 import type { LucideIcon } from 'lucide-react';
 
 import { ChartTrace } from '@/components/ChartTrace';
@@ -60,6 +70,7 @@ export function JourneyHeader({
   onSelectTab,
 }: Props) {
   const { t } = useI18n();
+  const [managingCategories, setManagingCategories] = useState(false);
   const window = journeySpan(journey);
   const samples = samplesForWindow(entries, window);
   // The pen is still running only while the Journey is, which is when NOW applies.
@@ -72,6 +83,14 @@ export function JourneyHeader({
           <span className="section-label">{t('Channel', '轨道')}</span>
           <span className="readout journey__channel">CH{penForJourney(journey.id)}</span>
           <StatusPill status={journey.status} />
+          <button
+            type="button"
+            className="button journey__classifications"
+            onClick={() => setManagingCategories(true)}
+          >
+            <Tags size={13} aria-hidden />
+            {t('Manage categories', '管理分类')}
+          </button>
         </div>
 
         <div className="journey__identity">
@@ -171,6 +190,13 @@ export function JourneyHeader({
           );
         })}
       </div>
+      {managingCategories ? (
+        <ClassificationManager
+          key={journey.id}
+          journeyId={journey.id}
+          onClose={() => setManagingCategories(false)}
+        />
+      ) : null}
     </>
   );
 }

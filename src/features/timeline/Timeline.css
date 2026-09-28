@@ -279,33 +279,6 @@ button.entry:focus-visible .entry__surface {
   background: var(--sunk);
 }
 
-/**
- * An entry filed onto a tracked thing takes its stage's colour on the left edge.
- *
- * A 2px edge rather than the whole border: the card's frame is structure and
- * belongs to the timeline, while the stage is one fact about this entry. Colouring
- * all four sides would turn a page of staged entries into the rainbow of category
- * colours UX_SPEC.md §7 rules out, and would compete with the dashed border a
- * plan uses.
- *
- * `--stage-ink` is set on `.entry` by TimelineEntryView. Never the only signal:
- * the stage's name is always rendered as a chip beside the title.
- */
-.entry--staged .entry__surface {
-  border-left: 2px solid var(--stage-ink);
-  /* Keeps the text aligned with unstaged entries despite the thicker edge. */
-  padding-left: calc(var(--space-4) - 1px);
-}
-
-/*
- * A plan's dashed edge wins: "this has not happened yet" is a stronger fact about
- * an entry than which stage it is aimed at, and two competing left borders would
- * make neither legible.
- */
-.entry--planned.entry--staged .entry__surface {
-  border-left-style: dashed;
-}
-
 /* The chip is the event's kind, in neutral ink — the channel is named in a tag. */
 .entry__chip {
   display: grid;

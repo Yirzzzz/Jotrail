@@ -8,7 +8,7 @@ use rusqlite::{params, Connection, Row};
 use serde::Deserialize;
 
 use crate::clock::{now_utc, to_utc};
-use crate::db::{event_images, journeys_by_event, new_id};
+use crate::db::{event_images, journeys_by_event, new_id, state_categories};
 use crate::domain::{
     ConfirmPlannedEvent, TimelineEntry, TimelineEvent, TimelineEventPatch, TimelineEventState,
     TimelineImportance,
@@ -143,13 +143,22 @@ pub fn get(conn: &Connection, id: &str) -> AppResult<Option<TimelineEntry>> {
         .unwrap_or_default();
     // One event, so a targeted lookup rather than the whole-table map `list` uses.
     let stage_tone = tone_for(&stage_tones(conn)?, &event);
+    let stage_names = crate::db::stage_sets::names_by_subject(conn)?;
+    let stage_category_name = event
+        .subject_id
+        .as_ref()
+        .and_then(|id| stage_names.get(id))
+        .cloned();
     let images = event_images::for_event(conn, &event.id)?;
+    let classifications = state_categories::for_event(conn, &event.id)?;
     Ok(Some(TimelineEntry {
         event,
         journeys,
         tasks,
         stage_tone,
+        stage_category_name,
         images,
+        classifications,
     }))
 }
 
@@ -220,6 +229,10 @@ fn list_matching(
                  OR e.summary LIKE '%' || ?2 || '%'
                  OR e.reflection LIKE '%' || ?2 || '%'
                  OR e.stage LIKE '%' || ?2 || '%'
+                 OR EXISTS (SELECT 1 FROM event_classifications c
+                             WHERE c.event_id = e.id AND c.category_name LIKE '%' || ?2 || '%')
+                 OR EXISTS (SELECT 1 FROM event_classification_options c
+                             WHERE c.event_id = e.id AND c.label LIKE '%' || ?2 || '%')
                  OR EXISTS (SELECT 1 FROM subjects s
                              WHERE s.id = e.subject_id
                                AND s.title LIKE '%' || ?2 || '%'))
@@ -237,7 +250,9 @@ fn list_matching(
     // The colour each recorded stage carries, from the set describing its
     // register. One lookup for the whole list rather than a join per row.
     let tones = stage_tones(conn)?;
+    let stage_names = crate::db::stage_sets::names_by_subject(conn)?;
     let mut images_by_event = event_images::by_event(conn)?;
+    let mut classifications_by_event = state_categories::by_event(conn)?;
 
     Ok(events
         .into_iter()
@@ -245,13 +260,23 @@ fn list_matching(
             let journeys = by_event.remove(&event.id).unwrap_or_default();
             let tasks = spawned.remove(&event.id).unwrap_or_default();
             let stage_tone = tone_for(&tones, &event);
+            let stage_category_name = event
+                .subject_id
+                .as_ref()
+                .and_then(|id| stage_names.get(id))
+                .cloned();
             let images = images_by_event.remove(&event.id).unwrap_or_default();
+            let classifications = classifications_by_event
+                .remove(&event.id)
+                .unwrap_or_default();
             TimelineEntry {
                 event,
                 journeys,
                 tasks,
                 stage_tone,
+                stage_category_name,
                 images,
+                classifications,
             }
         })
         .collect())
@@ -331,6 +356,39 @@ pub fn can_edit_images(event: &TimelineEvent) -> bool {
         )
 }
 
+/// Classification corrections keep the original value/context recoverable.
+/// All callers hold the same transaction as the event/image/classification save.
+fn audit_stage_change(
+    conn: &Connection,
+    previous: &TimelineEvent,
+    subject_id: &Option<String>,
+    stage: &Option<String>,
+) -> AppResult<()> {
+    if (previous.stage == *stage && previous.subject_id == *subject_id)
+        || (previous.stage.is_none() && stage.is_none())
+    {
+        return Ok(());
+    }
+    let stage_names = crate::db::stage_sets::names_by_subject(conn)?;
+    let stage_category_name = previous
+        .subject_id
+        .as_ref()
+        .and_then(|id| stage_names.get(id));
+    state_categories::audit(
+        conn,
+        "event",
+        &previous.id,
+        "stage_updated",
+        &serde_json::json!({
+            "stage": previous.stage,
+            "subjectId": previous.subject_id,
+            "stageCategoryName": stage_category_name,
+            "eventState": previous.event_state,
+            "occurredAt": previous.occurred_at
+        }),
+    )
+}
+
 /// Confirm that a planned event happened, moving it onto the record.
 ///
 /// Two things change together, which is why this is one command: the state flips
@@ -373,6 +431,19 @@ pub fn confirm(
             "Images can only be attached to an explicit event".into(),
         ));
     }
+    if input.classifications.is_some() && !can_edit_images(&existing) {
+        return Err(AppError::Invalid(
+            "Classifications can only be attached to an explicit event".into(),
+        ));
+    }
+    if input.stage.is_some() && !can_edit_images(&existing) {
+        return Err(AppError::Invalid(
+            "Stages can only be changed on an explicit event".into(),
+        ));
+    }
+    let original = existing.clone();
+    let changes_filing = input.subject_id.is_some() || input.new_subject.is_some();
+    let changes_stage = input.stage.is_some();
 
     let title = match input.title {
         Some(value) => {
@@ -479,7 +550,15 @@ pub fn confirm(
             .map(str::to_string),
         None => existing.stage,
     };
-    let stage = if subject_id.is_some() { stage } else { None };
+    if changes_stage && !changes_filing && stage.is_some() && subject_id.is_none() {
+        return Err(AppError::Invalid("a stage needs a tracked item".into()));
+    }
+    let stage = if subject_id.is_some() || (!changes_filing && !changes_stage) {
+        stage
+    } else {
+        None
+    };
+    audit_stage_change(&tx, &original, &subject_id, &stage)?;
 
     tx.execute(
         "UPDATE timeline_events
@@ -498,6 +577,9 @@ pub fn confirm(
     )?;
     if let Some(images) = input.images {
         event_images::replace_within(&tx, id, &images)?;
+    }
+    if let Some(classifications) = input.classifications {
+        state_categories::replace_within(&tx, id, &classifications)?;
     }
     tx.commit()?;
 
@@ -592,31 +674,62 @@ pub fn update(conn: &Connection, id: &str, patch: TimelineEventPatch) -> AppResu
         .ok()
         .ok_or_else(|| AppError::NotFound(format!("timeline event `{id}`")))?;
 
-    let images_only = patch.images.is_some()
-        && patch.title.is_none()
-        && patch.summary.is_none()
-        && patch.reflection.is_none()
-        && patch.occurred_at.is_none()
-        && patch.subject_id.is_none()
-        && patch.stage.is_none();
+    let metadata_only =
+        (patch.images.is_some() || patch.classifications.is_some() || patch.stage.is_some())
+            && patch.title.is_none()
+            && patch.summary.is_none()
+            && patch.reflection.is_none()
+            && patch.occurred_at.is_none()
+            && patch.subject_id.is_none();
     if patch.images.is_some() && !can_edit_images(&existing) {
         return Err(AppError::Invalid(
             "Images can only be attached to an explicit event".into(),
         ));
     }
-    if !is_editable(&existing) && !images_only {
+    if patch.classifications.is_some() && !can_edit_images(&existing) {
+        return Err(AppError::Invalid(
+            "Classifications can only be attached to an explicit event".into(),
+        ));
+    }
+    if patch.stage.is_some() && !can_edit_images(&existing) {
+        return Err(AppError::Invalid(
+            "Stages can only be changed on an explicit event".into(),
+        ));
+    }
+    if !is_editable(&existing) && !metadata_only {
         return Err(AppError::Invalid(
             "only planned events and recorded events of normal weight can be edited".into(),
         ));
     }
-    if images_only {
+    if metadata_only {
         let tx = conn.unchecked_transaction()?;
-        event_images::replace_within(&tx, id, patch.images.as_deref().unwrap_or_default())?;
+        if let Some(stage) = patch.stage {
+            let stage = stage
+                .map(|value| value.trim().to_string())
+                .filter(|value| !value.is_empty());
+            if stage.is_some() && existing.subject_id.is_none() {
+                return Err(AppError::Invalid("a stage needs a tracked item".into()));
+            }
+            audit_stage_change(&tx, &existing, &existing.subject_id, &stage)?;
+            tx.execute(
+                "UPDATE timeline_events SET stage = ?2 WHERE id = ?1",
+                params![id, stage],
+            )?;
+        }
+        if let Some(images) = patch.images {
+            event_images::replace_within(&tx, id, &images)?;
+        }
+        if let Some(classifications) = patch.classifications {
+            state_categories::replace_within(&tx, id, &classifications)?;
+        }
         tx.commit()?;
-        // Do not even normalise other fields on an images-only edit. A stage
+        // Do not even normalise omitted fields on a metadata-only edit. A stage
         // can intentionally survive after its subject is untracked, for example.
         return get(conn, id)?.ok_or_else(|| AppError::NotFound(format!("timeline event `{id}`")));
     }
+
+    let original = existing.clone();
+    let changes_filing = patch.subject_id.is_some();
 
     let title = match patch.title {
         Some(value) => {
@@ -694,11 +807,18 @@ pub fn update(conn: &Connection, id: &str, patch: TimelineEventPatch) -> AppResu
 
     // A stage with nothing to be the stage *of* is meaningless, so unfiling
     // clears it rather than leaving an orphan label behind.
-    let stage = match (&subject_id, patch.stage) {
-        (None, _) => None,
-        (Some(_), Some(value)) => value
+    let requested_stage = patch.stage.map(|value| {
+        value
             .map(|v| v.trim().to_string())
-            .filter(|v| !v.is_empty()),
+            .filter(|v| !v.is_empty())
+    });
+    if !changes_filing && matches!(requested_stage, Some(Some(_))) && subject_id.is_none() {
+        return Err(AppError::Invalid("a stage needs a tracked item".into()));
+    }
+    let stage = match (&subject_id, requested_stage) {
+        (_, None) if !changes_filing => existing.stage,
+        (None, _) => None,
+        (Some(_), Some(value)) => value,
         (Some(_), None) => existing.stage,
     };
 
@@ -708,6 +828,7 @@ pub fn update(conn: &Connection, id: &str, patch: TimelineEventPatch) -> AppResu
     // Re-dating therefore moves the entry within the existing `occurred_at, seq`
     // ordering without disturbing the tie-break (migration 0002).
     let tx = conn.unchecked_transaction()?;
+    audit_stage_change(&tx, &original, &subject_id, &stage)?;
     tx.execute(
         "UPDATE timeline_events
             SET title = ?2, summary = ?3, reflection = ?4, occurred_at = ?5,
@@ -726,6 +847,9 @@ pub fn update(conn: &Connection, id: &str, patch: TimelineEventPatch) -> AppResu
     )?;
     if let Some(images) = patch.images {
         event_images::replace_within(&tx, id, &images)?;
+    }
+    if let Some(classifications) = patch.classifications {
+        state_categories::replace_within(&tx, id, &classifications)?;
     }
     tx.commit()?;
 

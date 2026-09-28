@@ -18,7 +18,15 @@ import { CalendarClock, Check, Plus, X } from 'lucide-react';
 
 import { Modal } from '@/components/Modal';
 import { useInvalidate, useRepoQuery, useRepository } from '@/data/RepositoryContext';
-import { SubjectField, useSubjectField } from '@/features/registers/SubjectField';
+import {
+  SubjectField,
+  SubjectStageField,
+  useSubjectField,
+} from '@/features/registers/SubjectField';
+import {
+  ClassificationField,
+  useClassificationField,
+} from '@/features/registers/ClassificationField';
 import type { TimelineImportance } from '@/domain/types';
 import { EventImageField, useEventImages } from './EventImages';
 import { useI18n } from '@/lib/i18n';
@@ -105,6 +113,10 @@ export function RecordEventDialog({ journeyId, onClose }: Props) {
    */
   const primaryJourney = selectedJourneys[0] ?? null;
   const subjectField = useSubjectField({ journeyId: primaryJourney, entryTitle: title });
+  const classificationField = useClassificationField({
+    journeyIds: selectedJourneys,
+    subjectId: subjectField.subjectId,
+  });
 
   /*
    * The to-dos this event comes with.
@@ -196,6 +208,9 @@ export function RecordEventDialog({ journeyId, onClose }: Props) {
          * which keeps the sentinel it uses internally out of the payload.
          */
         ...subjectField.filing,
+        ...(classificationField.inputs.length > 0
+          ? { classifications: classificationField.inputs }
+          : {}),
         /*
          * A to-do still sitting in the draft field counts: losing it because the
          * user pressed Record instead of Enter would be the dialog quietly
@@ -285,6 +300,8 @@ export function RecordEventDialog({ journeyId, onClose }: Props) {
             register is concerned (D-051).
           */}
           <SubjectField field={subjectField} idPrefix="event" />
+          <SubjectStageField field={subjectField} idPrefix="event" disabled={isSaving} />
+          <ClassificationField field={classificationField} disabled={isSaving} />
 
           {/*
             The second of the two smallest units.

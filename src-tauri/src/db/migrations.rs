@@ -4,7 +4,7 @@
 use rusqlite::{params, Connection};
 
 use crate::clock::now_utc;
-use crate::error::AppResult;
+use crate::error::{AppError, AppResult};
 
 struct Migration {
     version: i64,
@@ -54,9 +54,26 @@ const MIGRATIONS: &[Migration] = &[
         name: "event_images",
         sql: include_str!("../../migrations/0008_event_images.sql"),
     },
+    Migration {
+        version: 9,
+        name: "state_categories",
+        sql: include_str!("../../migrations/0009_state_categories.sql"),
+    },
 ];
 
 pub fn run(conn: &Connection) -> AppResult<()> {
+    run_until(conn, MIGRATIONS.last().expect("migrations exist").version)
+}
+
+/// Build an exact historical schema for strict backup validation. Never rolls
+/// an existing database back; callers use a fresh isolated connection.
+pub(super) fn run_until(conn: &Connection, target_version: i64) -> AppResult<()> {
+    if !MIGRATIONS
+        .iter()
+        .any(|migration| migration.version == target_version)
+    {
+        return Err(AppError::Invalid("unknown migration target".into()));
+    }
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS schema_migrations (
            version INTEGER PRIMARY KEY,
@@ -65,7 +82,15 @@ pub fn run(conn: &Connection) -> AppResult<()> {
          );",
     )?;
 
-    for migration in MIGRATIONS {
+    if current_version(conn)? > target_version {
+        return Err(AppError::Invalid(
+            "cannot migrate a database backwards".into(),
+        ));
+    }
+    for migration in MIGRATIONS
+        .iter()
+        .filter(|migration| migration.version <= target_version)
+    {
         let already_applied: bool = conn.query_row(
             "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version = ?1)",
             params![migration.version],

@@ -8,6 +8,7 @@ pub mod migrations;
 pub mod notes;
 pub mod seed;
 pub mod stage_sets;
+pub mod state_categories;
 pub mod subjects;
 pub mod tasks;
 pub mod timeline;

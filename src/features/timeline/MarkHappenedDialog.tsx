@@ -24,7 +24,15 @@ import { CalendarClock } from 'lucide-react';
 
 import { Modal } from '@/components/Modal';
 import { useInvalidate, useRepository } from '@/data/RepositoryContext';
-import { SubjectField, useSubjectField } from '@/features/registers/SubjectField';
+import {
+  SubjectField,
+  SubjectStageField,
+  useSubjectField,
+} from '@/features/registers/SubjectField';
+import {
+  ClassificationField,
+  useClassificationField,
+} from '@/features/registers/ClassificationField';
 import type { TimelineEntry } from '@/domain/types';
 import { EventImageField, useEventImages } from './EventImages';
 import { useI18n } from '@/lib/i18n';
@@ -67,12 +75,19 @@ export function MarkHappenedDialog({ entry, onClose }: Props) {
    * — already filed onto that paper — only has to answer the stage. An unfiled
    * plan like `2027 ICRA` gets the whole question, including "+ A new one…".
    *
-   * Scoped to the entry's first Journey, because a subject belongs to exactly one.
+   * Look across the linked Journeys so an existing association retains its vocabulary.
    */
   const subjectField = useSubjectField({
     journeyId: entry.journeys[0]?.id ?? null,
     entryTitle: title,
     initialSubjectId: entry.subjectId,
+    initialStage: entry.stage,
+    linkedJourneyIds: entry.journeys.map((journey) => journey.id),
+  });
+  const classificationField = useClassificationField({
+    journeyIds: entry.journeys.map((journey) => journey.id),
+    initial: entry.classifications,
+    subjectId: subjectField.subjectId,
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -108,15 +123,21 @@ export function MarkHappenedDialog({ entry, onClose }: Props) {
         occurredAt,
         title: title.trim(),
         images: imageField.inputs,
-        /*
-         * The thing and its stage. `subjectId` is sent explicitly — including as
-         * `null` — so unfiling is expressible; omitting the key would mean "leave
-         * it", which cannot say "actually, nothing in particular".
-         */
+        // Omit an unchanged association. Explicit null means a deliberate unfiling,
+        // which also clears its stage; it must not erase an untouched orphan stage.
         ...(subjectField.filing.newSubject
           ? { newSubject: subjectField.filing.newSubject }
-          : { subjectId: subjectField.filing.subjectId ?? null }),
-        stage: subjectField.filing.stage ?? null,
+          : (subjectField.filing.subjectId ?? null) !== entry.subjectId
+            ? { subjectId: subjectField.filing.subjectId ?? null }
+            : {}),
+        ...(subjectField.stageTouched ||
+        subjectField.isCreating ||
+        (subjectField.filing.subjectId ?? null) !== entry.subjectId
+          ? { stage: subjectField.filing.stage ?? null }
+          : {}),
+        ...(classificationField.inputs.length > 0
+          ? { classifications: classificationField.inputs }
+          : {}),
       });
       invalidate();
       onClose();
@@ -180,7 +201,13 @@ export function MarkHappenedDialog({ entry, onClose }: Props) {
             idPrefix="mark-happened"
             label={t('What this was', '这件事关于什么')}
           />
-
+          <SubjectStageField
+            field={subjectField}
+            idPrefix="mark-happened"
+            categoryName={entry.stageCategoryName}
+            disabled={isSaving}
+          />
+          <ClassificationField field={classificationField} disabled={isSaving} />
           <EventImageField field={imageField} disabled={isSaving} />
 
           <div style={{ display: 'flex', gap: 'var(--space-3)' }}>

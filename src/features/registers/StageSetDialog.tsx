@@ -39,6 +39,7 @@ import {
   stagesFromOptions,
 } from './StageListEditor';
 import './StageSet.css';
+import { OptionReplacements, useOptionReplacements } from './OptionReplacements';
 
 interface Props {
   /** Editing an existing set, or `null` to define a new one. */
@@ -50,9 +51,16 @@ interface Props {
   attachTo?: { journeyId: string; kind: string };
   onSaved: (set: StageSetWithOptions) => void;
   onClose: () => void;
+  onChooseSet?: () => void;
 }
 
-export function StageSetDialog({ existing = null, attachTo, onSaved, onClose }: Props) {
+export function StageSetDialog({
+  existing = null,
+  attachTo,
+  onSaved,
+  onClose,
+  onChooseSet,
+}: Props) {
   const { t } = useI18n();
   const repository = useRepository();
   const invalidate = useInvalidate();
@@ -66,7 +74,9 @@ export function StageSetDialog({ existing = null, attachTo, onSaved, onClose }: 
   const [error, setError] = useState<string | null>(null);
 
   const named = namedStages(stages);
-  const canSubmit = name.trim().length > 0 && named.length > 0 && !isSaving;
+  const replacements = useOptionReplacements(existing?.options ?? [], stages);
+  const canSubmit =
+    name.trim().length > 0 && named.length > 0 && replacements.complete && !isSaving;
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -78,7 +88,11 @@ export function StageSetDialog({ existing = null, attachTo, onSaved, onClose }: 
       const options = stageOptionsFrom(stages);
 
       const saved = existing
-        ? await repository.updateStageSet(existing.id, { name: name.trim(), options })
+        ? await repository.updateStageSet(existing.id, {
+            name: name.trim(),
+            options,
+            replacements: replacements.replacements,
+          })
         : await repository.createStageSet({ name: name.trim(), options });
 
       if (attachTo) {
@@ -94,21 +108,24 @@ export function StageSetDialog({ existing = null, attachTo, onSaved, onClose }: 
 
   return (
     <Modal
-      title={existing ? t('Edit stages', '编辑阶段') : t('Define the stages', '定义阶段')}
-      description={
-        existing
-          ? t('Renaming keeps existing records.', '重命名会保留已有记录。')
-          : t('Reusable across registers.', '可在多个清单中使用。')
-      }
+      title={existing ? t('Edit category', '编辑分类') : t('Add category', '新增分类')}
       onClose={onClose}
     >
       <form onSubmit={submit}>
         <div className="modal__body">
           {error ? <p className="error-banner">{error}</p> : null}
+          {existing && existing.registerCount > 1 ? (
+            <p className="field__hint">
+              {t(
+                `Changes apply to all ${existing.registerCount} registers using this set.`,
+                `修改会应用到使用此分类的全部 ${existing.registerCount} 个清单。`,
+              )}
+            </p>
+          ) : null}
 
           <div className="field">
             <label className="field__label" htmlFor="stage-set-name">
-              {t('What is this set called', '阶段集名称')}
+              {t('Name', '名称')}
             </label>
             <input
               id="stage-set-name"
@@ -120,18 +137,51 @@ export function StageSetDialog({ existing = null, attachTo, onSaved, onClose }: 
           </div>
 
           <div className="field">
-            <span className="field__label">{t('Stages', '阶段')}</span>
-            <StageListEditor stages={stages} onChange={setStages} />
+            <label className="field__label" htmlFor="stage-set-mode">
+              {t('Selection', '选择方式')}
+            </label>
+            <select id="stage-set-mode" className="input" value="single" disabled>
+              <option value="single">{t('Single choice', '单选')}</option>
+            </select>
           </div>
+
+          <div className="field">
+            <span className="field__label">{t('Options', '选项')}</span>
+            <StageListEditor
+              stages={stages}
+              onChange={setStages}
+              labelPrefix={t('Option', '选项')}
+              addLabel={t('Add option', '添加选项')}
+              showPreview={false}
+            />
+          </div>
+          <OptionReplacements field={replacements} />
         </div>
 
         <footer className="modal__footer">
-          {!isSaving && !name.trim() ? (
-            <span className="modal__footer-hint">{t('Name the set', '请填写阶段集名称')}</span>
+          {!replacements.complete ? (
+            <span className="modal__footer-hint">
+              {t('Choose replacements for removed options', '请为删除的选项选择替代项')}
+            </span>
+          ) : !isSaving && !name.trim() ? (
+            <span className="modal__footer-hint">
+              {t('Name the category', '请填写分类名称')}
+            </span>
           ) : !isSaving && named.length === 0 ? (
             <span className="modal__footer-hint">
-              {t('Add at least one stage', '请至少添加一个阶段')}
+              {t('Add at least one option', '请至少添加一个选项')}
             </span>
+          ) : null}
+          {onChooseSet ? (
+            <button
+              type="button"
+              className="button"
+              onClick={onChooseSet}
+              disabled={isSaving}
+              data-autofocus="false"
+            >
+              {t('Change set', '更换分类集')}
+            </button>
           ) : null}
           <button type="button" className="button" onClick={onClose} data-autofocus="false">
             {t('Cancel', '取消')}
