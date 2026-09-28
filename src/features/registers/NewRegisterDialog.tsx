@@ -35,14 +35,9 @@ export function NewRegisterDialog({ journeyId, onCreated, onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   /*
-   * Both fields are required, and that is a consequence of the schema rather than
-   * a preference: a `kind` exists only as a property of the things that carry it,
-   * so `subject_kinds` reads distinct kinds off the rows themselves. A register
-   * with nothing in it has nowhere to be stored, and submitting one would appear
-   * to succeed while creating no tab at all.
-   *
-   * The alternative was a `registers` table whose only column is a name — a table
-   * earning nothing, and a second place for the same fact to live.
+   * This short form creates a register through its first item; it does not set
+   * up states. Unlike New Journey, which may persist an empty register through
+   * its state-set binding, submitting this form needs an item to save.
    */
   const canSubmit = kind.trim().length > 0 && first.trim().length > 0 && !isSaving;
 
@@ -69,14 +64,7 @@ export function NewRegisterDialog({ journeyId, onCreated, onClose }: Props) {
   };
 
   return (
-    <Modal
-      title={t('Track a new kind of thing', '创建新的清单')}
-      description={t(
-        'Papers, positions, films — whatever this Journey accumulates.',
-        '论文、岗位、电影——记录旅程中积累的任何内容。',
-      )}
-      onClose={onClose}
-    >
+    <Modal title={t('Track a new kind of thing', '创建新的清单')} onClose={onClose}>
       <form onSubmit={submit}>
         <div className="modal__body">
           {error ? <p className="error-banner">{error}</p> : null}
@@ -90,15 +78,8 @@ export function NewRegisterDialog({ journeyId, onCreated, onClose }: Props) {
               className="input"
               value={kind}
               onChange={(event) => setKind(event.target.value)}
-              placeholder={t('Papers · Roles · Films', '论文 · 岗位 · 电影')}
               autoComplete="off"
             />
-            <span className="field__hint">
-              {t(
-                'Becomes a tab on this Journey. Your own word — it is shown as you write it.',
-                '它会成为此旅程的一个标签页，使用你自己的名称并原样显示。',
-              )}
-            </span>
           </div>
 
           <div className="field">
@@ -110,18 +91,8 @@ export function NewRegisterDialog({ journeyId, onCreated, onClose }: Props) {
               className="input"
               value={first}
               onChange={(event) => setFirst(event.target.value)}
-              placeholder={t(
-                '2027 ICLR · ByteDance · Dune: Part Two',
-                '2027 ICLR · ByteDance · 沙丘 2',
-              )}
               autoComplete="off"
             />
-            <span className="field__hint">
-              {t(
-                'No stages to define first. Whatever you type when recording becomes this register’s own vocabulary.',
-                '不必预先定义阶段。记录时写下的阶段会成为这个清单自己的用语。',
-              )}
-            </span>
           </div>
         </div>
 

@@ -79,7 +79,7 @@ export function LogComposer({ onLogged, inputId }: Props) {
           className="composer__input"
           value={title}
           onChange={(event) => setTitle(event.target.value)}
-          placeholder={t('Capture a moment, note it down…', '记下此刻，留住一个瞬间…')}
+          placeholder={t('Record something…', '记录一件事…')}
           aria-label={t('Record something that just happened', '记录刚刚发生的事')}
         />
 

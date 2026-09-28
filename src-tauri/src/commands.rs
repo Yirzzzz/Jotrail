@@ -7,12 +7,15 @@ use rusqlite::Connection;
 use tauri::State;
 
 use crate::db::timeline::SortOrder;
-use crate::db::{journeys, maintenance, notes, stage_sets, subjects, tasks, timeline};
+use crate::db::{
+    event_images, journeys, maintenance, notes, stage_sets, subjects, tasks, timeline,
+};
 use crate::domain::{
-    ConfirmPlannedEvent, Journey, JourneyPatch, JourneyStatus, NewJourney, NewNote, NewStageSet,
-    NewSubject, NewTask, NewTimelineEvent, NotePatch, NoteWithLinks, RegisterTally, StageSetPatch,
-    StageSetWithOptions, Subject, SubjectPatch, SubjectSummary, TaskStatus, TaskWithLinks,
-    TimelineEntry, TimelineEventPatch, TimelineEventState, TimelineImportance,
+    ConfirmPlannedEvent, EventImageVariant, Journey, JourneyPatch, JourneyStatus, NewJourney,
+    NewNote, NewStageSet, NewSubject, NewTask, NewTimelineEvent, NotePatch, NoteWithLinks,
+    RegisterTally, StageSetPatch, StageSetWithOptions, Subject, SubjectPatch, SubjectSummary,
+    TaskStatus, TaskWithLinks, TimelineEntry, TimelineEventPatch, TimelineEventState,
+    TimelineImportance,
 };
 use crate::error::{AppError, AppResult};
 use crate::AppState;
@@ -240,10 +243,11 @@ pub fn timeline_list(
 
 /// Correct an event that was already recorded.
 ///
-/// Narrower than recording one: only the wording and the date, and only on
-/// entries `timeline::is_editable` accepts (DECISIONS.md D-040).
+/// Wording/date restrictions stay with `timeline::is_editable` (D-040). An
+/// images-only patch may also attach pictures to explicit milestones (D-062).
+/// Async dispatch keeps image decoding off the synchronous window IPC handler.
 #[tauri::command]
-pub fn timeline_update_event(
+pub async fn timeline_update_event(
     state: State<'_, AppState>,
     id: String,
     patch: TimelineEventPatch,
@@ -257,7 +261,7 @@ pub fn timeline_update_event(
 /// The state flip and the real date are one write, so an entry can never be on
 /// the record while still dated at the deadline it was aiming for.
 #[tauri::command]
-pub fn timeline_confirm_event(
+pub async fn timeline_confirm_event(
     state: State<'_, AppState>,
     id: String,
     input: ConfirmPlannedEvent,
@@ -311,12 +315,18 @@ pub fn subject_search(
 /// Record something that happened — including in the past, which is the whole
 /// point of keeping `occurred_at` separate from `created_at`.
 #[tauri::command]
-pub fn timeline_create_event(
+pub async fn timeline_create_event(
     state: State<'_, AppState>,
     input: NewTimelineEvent,
 ) -> AppResult<TimelineEntry> {
     let db = conn(&state)?;
 
+    create_timeline_event(&db, input)
+}
+
+/// Kept outside Tauri state so the complete save transaction is testable against
+/// a temporary database, including failures after images have been inserted.
+fn create_timeline_event(db: &Connection, input: NewTimelineEvent) -> AppResult<TimelineEntry> {
     let title = input.title.trim();
     if title.is_empty() {
         return Err(AppError::Invalid("an event needs a title".into()));
@@ -470,6 +480,12 @@ pub fn timeline_create_event(
         event.payload_json = Some(serde_json::to_string(&normalised)?);
     }
 
+    if input.images.is_some() && !timeline::can_edit_images(&event) {
+        return Err(AppError::Invalid(
+            "Images can only be attached to an explicit event".into(),
+        ));
+    }
+
     let journey_ids = input.journey_ids.unwrap_or_default();
     for journey_id in &journey_ids {
         if journeys::find(&db, journey_id)?.is_none() {
@@ -501,6 +517,9 @@ pub fn timeline_create_event(
     }
 
     timeline::insert_event(&tx, &event, &journey_ids)?;
+    if let Some(images) = input.images {
+        event_images::replace_within(&tx, &event.id, &images)?;
+    }
 
     // Work the event revealed. Created in the same transaction so "the interview
     // showed me three gaps" is recorded as one act, and linked back to the event
@@ -545,6 +564,24 @@ pub fn timeline_create_event(
 
     timeline::get(&db, &event.id)?
         .ok_or_else(|| AppError::NotFound(format!("timeline event `{}`", event.id)))
+}
+
+#[tauri::command]
+pub async fn event_image_read(
+    state: State<'_, AppState>,
+    id: String,
+    variant: EventImageVariant,
+) -> AppResult<String> {
+    let db = conn(&state)?;
+    event_images::read(&db, &id, variant)
+}
+
+#[cfg(all(test, feature = "local-tests"))]
+mod image_save_tests {
+    include!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/local-tests/event_image_commands.rs"
+    ));
 }
 
 // ---------------------------------------------------------------------------

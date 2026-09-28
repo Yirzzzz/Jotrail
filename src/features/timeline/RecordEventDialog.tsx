@@ -20,6 +20,7 @@ import { Modal } from '@/components/Modal';
 import { useInvalidate, useRepoQuery, useRepository } from '@/data/RepositoryContext';
 import { SubjectField, useSubjectField } from '@/features/registers/SubjectField';
 import type { TimelineImportance } from '@/domain/types';
+import { EventImageField, useEventImages } from './EventImages';
 import { useI18n } from '@/lib/i18n';
 import {
   dateInputValue,
@@ -58,6 +59,7 @@ export function RecordEventDialog({ journeyId, onClose }: Props) {
   const [title, setTitle] = useState('');
   const [summary, setSummary] = useState('');
   const [reflection, setReflection] = useState('');
+  const imageField = useEventImages();
   const [date, setDate] = useState(dateInputValue(now));
   const [time, setTime] = useState(timeInputValue(now));
   const [importance, setImportance] = useState<TimelineImportance>('normal');
@@ -147,7 +149,8 @@ export function RecordEventDialog({ journeyId, onClose }: Props) {
     occurredAt !== null &&
     (!isTracking || stateIsComplete || isPlanned) &&
     subjectField.blockedReason === null &&
-    !isSaving;
+    !isSaving &&
+    !imageField.isReading;
 
   // A greyed-out button with no explanation is a dead end; name what is missing.
   let blockedReason: string | null = null;
@@ -183,6 +186,7 @@ export function RecordEventDialog({ journeyId, onClose }: Props) {
         occurredAt,
         importance,
         journeyIds: selectedJourneys,
+        ...(imageField.inputs.length > 0 ? { images: imageField.inputs } : {}),
         // What makes this a commitment rather than a record. `occurredAt` is then
         // the date it is aimed at, kept as `plannedFor` when it is confirmed.
         ...(isPlanned ? { planned: true } : {}),
@@ -238,27 +242,24 @@ export function RecordEventDialog({ journeyId, onClose }: Props) {
     }
   };
 
+  const close = () => {
+    if (!isSaving) onClose();
+  };
+
   return (
     <Modal
       title={
         isPlanned ? t('Plan something ahead', '记录未来计划') : t('Record an event', '记录事件')
       }
-      description={
-        isPlanned
-          ? t(
-              'A deadline or a date you are working towards. Mark it as happened when it does.',
-              '记下一个截止日期或期待的日子。实现之后，再标记为已发生。',
-            )
-          : t(
-              'Something that happened, at the time it happened.',
-              '记下一件事，以及它发生的时间。',
-            )
-      }
-      onClose={onClose}
+      onClose={close}
     >
       <form onSubmit={submit}>
         <div className="modal__body">
-          {error ? <p className="error-banner">{error}</p> : null}
+          {error ? (
+            <p className="error-banner" role="alert">
+              {error}
+            </p>
+          ) : null}
 
           <div className="field">
             <label className="field__label" htmlFor="event-title">
@@ -271,17 +272,6 @@ export function RecordEventDialog({ journeyId, onClose }: Props) {
               className="input"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              placeholder={
-                isPlanned
-                  ? t(
-                      'ICLR 2027 截稿 · Interview · Race day…',
-                      'ICLR 2027 截稿 · 面试 · 比赛日…',
-                    )
-                  : t(
-                      'Applied · First session · Paper accepted…',
-                      '已申请 · 第一次训练 · 论文录用…',
-                    )
-              }
               autoComplete="off"
             />
           </div>
@@ -312,12 +302,6 @@ export function RecordEventDialog({ journeyId, onClose }: Props) {
             <span className="field__label">
               {t('Something to do', '待办事项')}{' '}
               <span className="field__hint">{t('Optional', '选填')}</span>
-            </span>
-            <span className="field__hint">
-              {t(
-                'Work this leaves behind. Kept with the event, and dated work reaches “Up next”.',
-                '记录由此产生的待办。它们会与事件保存在一起，设有日期的任务会出现在“接下来”。',
-              )}
             </span>
 
             {todos.length > 0 ? (
@@ -358,7 +342,6 @@ export function RecordEventDialog({ journeyId, onClose }: Props) {
                     addTodo();
                   }
                 }}
-                placeholder={t('Next action, idea, or reminder…', '下一步、想法或提醒…')}
                 autoComplete="off"
                 aria-label={t('Something to do', '待办事项')}
               />
@@ -398,6 +381,8 @@ export function RecordEventDialog({ journeyId, onClose }: Props) {
             />
           </div>
 
+          <EventImageField field={imageField} disabled={isSaving} />
+
           <div className="field">
             <label className="field__label" htmlFor="event-reflection">
               {t('Why?', '为什么？')}{' '}
@@ -408,10 +393,6 @@ export function RecordEventDialog({ journeyId, onClose }: Props) {
               className="input input--textarea"
               value={reflection}
               onChange={(event) => setReflection(event.target.value)}
-              placeholder={t(
-                'Worth writing down now; hard to reconstruct later.',
-                '值得现在记下的感受，以后可能难以还原。',
-              )}
               rows={2}
             />
           </div>
@@ -478,19 +459,13 @@ export function RecordEventDialog({ journeyId, onClose }: Props) {
                 {t('Planned', '计划')}
               </button>
             </div>
-            <span className="field__hint">
-              {isPlanned
-                ? dateIsAhead
-                  ? t(
-                      'That date is ahead, so this is kept as a plan until you mark it as happened.',
-                      '日期在未来，将作为计划保留，直到你标记为已发生。',
-                    )
-                  : t(
-                      'Kept as a plan even though the date has passed — it will read as overdue.',
-                      '日期虽然已过，仍作为计划保留，并显示为已逾期。',
-                    )
-                : t('On the record, at the date above.', '按上方日期记入时间线。')}
-            </span>
+            {isPlanned ? (
+              <span className="field__hint">
+                {dateIsAhead
+                  ? t('Mark as happened when complete.', '完成后可标记为已发生。')
+                  : t('This plan will appear as overdue.', '此计划将显示为已逾期。')}
+              </span>
+            ) : null}
           </div>
 
           <div className="field">
@@ -537,14 +512,6 @@ export function RecordEventDialog({ journeyId, onClose }: Props) {
                     ? t('Recording a change', '正在记录状态变化')
                     : t('This changed a state…', '记录一次状态变化…')}
                 </button>
-                {!isTracking ? (
-                  <span className="field__hint">
-                    {t(
-                      'For “Not ready → Ready”, “Basic → Intermediate” and the like. Kept as history and shown on the Journey’s overview.',
-                      '例如“未准备好 → 已准备好”、“基础 → 进阶”。变化会保留为历史，并显示在旅程概览中。',
-                    )}
-                  </span>
-                ) : null}
               </div>
 
               {isTracking ? (
@@ -560,10 +527,6 @@ export function RecordEventDialog({ journeyId, onClose }: Props) {
                         className="input"
                         value={stateSubject}
                         onChange={(event) => setStateSubject(event.target.value)}
-                        placeholder={t(
-                          'ROS2 · ByteDance · Bench press',
-                          'ROS2 · 字节跳动 · 卧推',
-                        )}
                         autoComplete="off"
                       />
                     </div>
@@ -576,10 +539,6 @@ export function RecordEventDialog({ journeyId, onClose }: Props) {
                         className="input"
                         value={stateField}
                         onChange={(event) => setStateField(event.target.value)}
-                        placeholder={t(
-                          'capability · readiness · weight',
-                          '能力 · 准备程度 · 重量',
-                        )}
                         autoComplete="off"
                       />
                     </div>
@@ -596,7 +555,6 @@ export function RecordEventDialog({ journeyId, onClose }: Props) {
                         className="input"
                         value={stateFrom}
                         onChange={(event) => setStateFrom(event.target.value)}
-                        placeholder={t('basic', '基础')}
                         autoComplete="off"
                       />
                     </div>
@@ -609,7 +567,6 @@ export function RecordEventDialog({ journeyId, onClose }: Props) {
                         className="input"
                         value={stateTo}
                         onChange={(event) => setStateTo(event.target.value)}
-                        placeholder={t('intermediate', '进阶')}
                         autoComplete="off"
                       />
                     </div>
@@ -648,7 +605,13 @@ export function RecordEventDialog({ journeyId, onClose }: Props) {
         <footer className="modal__footer">
           {/* Say why the button is unavailable rather than just greying it out. */}
           {blockedReason ? <span className="modal__footer-hint">{blockedReason}</span> : null}
-          <button type="button" className="button" onClick={onClose} data-autofocus="false">
+          <button
+            type="button"
+            className="button"
+            onClick={close}
+            disabled={isSaving}
+            data-autofocus="false"
+          >
             {t('Cancel', '取消')}
           </button>
           <button type="submit" className="button button--primary" disabled={!canSubmit}>

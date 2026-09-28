@@ -97,14 +97,8 @@ export function StageSetDialog({ existing = null, attachTo, onSaved, onClose }: 
       title={existing ? t('Edit stages', '编辑阶段') : t('Define the stages', '定义阶段')}
       description={
         existing
-          ? t(
-              'Renaming a stage keeps everything already recorded at it.',
-              '重命名阶段不会影响已经记录的内容。',
-            )
-          : t(
-              'Your own words, each with a colour. Reusable by any register.',
-              '用你自己的名称，为每个阶段选一种颜色。任何清单都能重复使用。',
-            )
+          ? t('Renaming keeps existing records.', '重命名会保留已有记录。')
+          : t('Reusable across registers.', '可在多个清单中使用。')
       }
       onClose={onClose}
     >
@@ -121,30 +115,13 @@ export function StageSetDialog({ existing = null, attachTo, onSaved, onClose }: 
               className="input"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder={t(
-                'Paper submissions · Interviews · Film watching',
-                '投稿流程 · 面试流程 · 观影',
-              )}
               autoComplete="off"
             />
-            <span className="field__hint">
-              {t(
-                'Named so another Journey can pick it up — next year’s job search uses the same one.',
-                '为它命名，其他旅程就可以直接使用——比如明年的秋招。',
-              )}
-            </span>
           </div>
 
           <div className="field">
             <span className="field__label">{t('Stages', '阶段')}</span>
-            <StageListEditor
-              stages={stages}
-              onChange={setStages}
-              hint={t(
-                'Each one is just a label and a colour. There is no order to get right — a stage says where something stands now, not which step it is.',
-                '每个阶段只有名称和颜色。不必排列顺序：阶段表示当前情况，而不是流程中的第几步。',
-              )}
-            />
+            <StageListEditor stages={stages} onChange={setStages} />
           </div>
         </div>
 

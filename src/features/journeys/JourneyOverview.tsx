@@ -111,7 +111,9 @@ export function JourneyOverview({
             <p className="focus-card__summary selectable">{focus.summary}</p>
           ) : null}
           <div className="focus-card__meta">
-            <span className="pill pill--quiet">{eventTypeLabel(focus)}</span>
+            {focus.eventType !== 'event_recorded' || focus.importance === 'milestone' ? (
+              <span className="pill pill--quiet">{eventTypeLabel(focus)}</span>
+            ) : null}
             <span className="focus-card__when">{formatRelativeDay(focus.occurredAt)}</span>
           </div>
         </section>

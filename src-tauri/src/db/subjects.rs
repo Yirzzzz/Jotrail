@@ -406,14 +406,21 @@ pub fn list(
 /// Which registers a Journey has, and how many things are in each.
 ///
 /// Real arithmetic on real rows — "12 papers, 4 positions" — not an invented
-/// score (D-007). This is what lets the Journey grow a tab per register without
-/// anything being configured.
+/// score (D-007). A register exists through its subjects or an explicit stage-set
+/// configuration. The latter remains visible before its first subject, with a
+/// truthful zero count, so the event form can offer its configured states.
 pub fn kinds(conn: &Connection, journey_id: &str) -> AppResult<Vec<(String, i64)>> {
     let mut stmt = conn.prepare(
-        "SELECT kind, COUNT(*) AS total FROM subjects
-          WHERE journey_id = ?1
-          GROUP BY kind
-          ORDER BY kind COLLATE NOCASE",
+        "WITH register_kinds AS (
+           SELECT kind FROM subjects WHERE journey_id = ?1
+           UNION
+           SELECT kind FROM register_stage_sets WHERE journey_id = ?1
+         )
+         SELECT k.kind, COUNT(s.id) AS total
+           FROM register_kinds k
+           LEFT JOIN subjects s ON s.journey_id = ?1 AND s.kind = k.kind
+          GROUP BY k.kind
+          ORDER BY k.kind COLLATE NOCASE",
     )?;
     let rows = stmt
         .query_map(params![journey_id], |row| {

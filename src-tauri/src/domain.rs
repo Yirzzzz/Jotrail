@@ -246,6 +246,44 @@ pub struct TimelineEntry {
     /// event through its subject to the register's set, which is three tables the
     /// UI has no business knowing about.
     pub stage_tone: Option<String>,
+    /// Attachment metadata only; originals and thumbnails load on demand.
+    #[serde(default)]
+    pub images: Vec<EventImage>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EventImage {
+    pub id: String,
+    pub event_id: String,
+    pub file_name: String,
+    pub mime_type: String,
+    pub byte_size: u64,
+    pub width: u32,
+    pub height: u32,
+}
+
+/// An ordered attachment list is either retained IDs or new local bytes. IDs
+/// may only refer to images already owned by the event being edited.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged, deny_unknown_fields)]
+pub enum EventImageInput {
+    Existing {
+        id: String,
+    },
+    New {
+        #[serde(rename = "fileName")]
+        file_name: String,
+        #[serde(rename = "dataBase64")]
+        data_base64: String,
+    },
+}
+
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EventImageVariant {
+    Thumbnail,
+    Original,
 }
 
 // ---------------------------------------------------------------------------
@@ -351,6 +389,7 @@ pub struct NewTimelineEvent {
     /// `stage` applies exactly as it would to a `subject_id`. Ignored when
     /// `subject_id` is set — that already names a thing.
     pub new_subject: Option<NewEventSubject>,
+    pub images: Option<Vec<EventImageInput>>,
 }
 
 /// A thing to start tracking *while* recording the event that is about it.
@@ -376,6 +415,8 @@ pub struct NewEventSubject {
 /// about a moment they already described — its wording and when it happened.
 /// Weight, journeys, the tracked transition and the to-dos it revealed are all
 /// left out, so an edit cannot quietly restructure history (DECISIONS.md D-040).
+/// An images-only patch is also allowed on explicit events of any weight, while
+/// their historical wording and dates stay protected (D-062).
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TimelineEventPatch {
@@ -397,6 +438,8 @@ pub struct TimelineEventPatch {
     pub subject_id: Option<Option<String>>,
     #[serde(default, with = "double_option")]
     pub stage: Option<Option<String>>,
+    /// Omitted preserves attachments; an empty list removes them all.
+    pub images: Option<Vec<EventImageInput>>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -600,6 +643,7 @@ pub struct ConfirmPlannedEvent {
     /// The stage it reached. `Some(None)` clears it; `None` leaves it.
     #[serde(default, with = "double_option")]
     pub stage: Option<Option<String>>,
+    pub images: Option<Vec<EventImageInput>>,
 }
 
 /// One to-do recorded alongside an event.

@@ -134,9 +134,7 @@ export function StageListEditor({
               className="input stage-editor__label"
               value={stage.label}
               onChange={(event) => updateStage(stage.key, { label: event.target.value })}
-              placeholder={
-                index === 0 ? t('Submitted', '投稿') : t('Another stage…', '其他阶段…')
-              }
+              placeholder={t('Stage name', '阶段名称')}
               aria-label={`${prefix} ${index + 1}`}
               autoComplete="off"
             />

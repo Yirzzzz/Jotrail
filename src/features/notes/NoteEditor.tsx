@@ -164,10 +164,7 @@ export function NoteEditor({ note, autoFocus = false, onDeleted }: Props) {
             onSave={autosave.saveInBackground}
             onBlur={autosave.saveInBackground}
             autoFocus={autoFocus}
-            placeholder={t(
-              'Write freely. You can link this to a Journey later.',
-              '自由书写，之后再关联到旅程。',
-            )}
+            placeholder={t('Start writing…', '开始书写…')}
             hideLeadingTitleHeading={hasRepeatedTitleHeading}
           />
         </div>

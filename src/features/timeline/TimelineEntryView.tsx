@@ -1,5 +1,5 @@
 /**
- * One timeline entry, with a shared title/body/metadata reading order.
+ * One timeline entry, with the title left and quiet metadata at the top right.
  *
  * Three densities retain the same event information while presentation varies:
  *
@@ -20,6 +20,7 @@ import {
   FileText,
   Flag,
   Lightbulb,
+  ImagePlus,
   Pencil,
   RotateCcw,
   Sparkles,
@@ -31,6 +32,7 @@ import { JourneyIcon } from '@/components/JourneyIcon';
 import { StageChip, stageToneStyle } from '@/components/StageChip';
 import {
   canRevertConfirmation,
+  canEditEventImages,
   densityFor,
   eventTypeLabel,
   formatStateValue,
@@ -45,6 +47,7 @@ import type { TimelineEntry } from '@/domain/types';
 import { formatFullDate, formatTimeOfDay, isSameLocalDay } from '@/lib/datetime';
 import { penStyle } from '@/lib/pens';
 import { useI18n } from '@/lib/i18n';
+import { EventImageGallery } from './EventImages';
 
 interface Props {
   entry: TimelineEntry;
@@ -91,7 +94,9 @@ export function TimelineEntryView({
    * as a button itself, and nesting one inside it would be invalid HTML. If
    * either rule is ever widened, this is the assumption that breaks.
    */
-  const manageable = (isEditable(entry) || canRevertConfirmation(entry)) && Boolean(onEdit);
+  const manageable =
+    (isEditable(entry) || canEditEventImages(entry) || canRevertConfirmation(entry)) &&
+    Boolean(onEdit);
   /*
    * Same disjointness argument, and it holds for the same reason: a planned
    * entry is one the user recorded by hand, so it has no note source and never
@@ -188,8 +193,10 @@ function EventActionsButton({
   const editable = isEditable(entry);
   const label = editable
     ? t(`Edit ${entry.title}`, `编辑 ${entry.title}`)
-    : t(`Manage ${entry.title}`, `管理 ${entry.title}`);
-  const Icon = editable ? Pencil : RotateCcw;
+    : canEditEventImages(entry) && !canRevertConfirmation(entry)
+      ? t(`Edit images for ${entry.title}`, `编辑 ${entry.title} 的图片`)
+      : t(`Manage ${entry.title}`, `管理 ${entry.title}`);
+  const Icon = editable ? Pencil : canRevertConfirmation(entry) ? RotateCcw : ImagePlus;
   return (
     <button
       type="button"
@@ -217,17 +224,24 @@ function CompactBody({
   return (
     <>
       <div className="entry__head">
-        <span className="entry__time">{formatTimeOfDay(entry.occurredAt)}</span>
-        <span className="entry__icon">
-          {reopened ? (
-            <RotateCcw size={13} strokeWidth={2} aria-hidden />
-          ) : (
-            <Check size={14} strokeWidth={2.5} aria-hidden />
-          )}
-        </span>
-        <span className="entry__title selectable">{entry.title}</span>
-        <EventActionsButton entry={entry} onEdit={onEdit} />
+        <div className="entry__heading">
+          <span className="entry__icon">
+            {reopened ? (
+              <RotateCcw size={13} strokeWidth={2} aria-hidden />
+            ) : (
+              <Check size={14} strokeWidth={2.5} aria-hidden />
+            )}
+          </span>
+          <span className="entry__title selectable">{entry.title}</span>
+          <EventActionsButton entry={entry} onEdit={onEdit} />
+        </div>
+        <div className="entry__meta">
+          <span className="entry__time">{formatTimeOfDay(entry.occurredAt)}</span>
+        </div>
       </div>
+      {entry.images.length > 0 ? (
+        <EventImageGallery images={entry.images} title={entry.title} />
+      ) : null}
       {showJourneys ? <JourneyBadges entry={entry} /> : null}
     </>
   );
@@ -251,60 +265,67 @@ function FullBody({
     entry.eventType === 'state_changed' ? parseStateChange(entry.payloadJson) : null;
   const planned = isPlanned(entry);
   const overdue = planned && isOverdue(entry);
+  // Ordinary events need no type badge; only show labels that add information.
+  const showTypeBadge =
+    planned || entry.eventType !== 'event_recorded' || entry.importance === 'milestone';
   // A commitment gets the calendar rather than its event kind: what matters
   // about it is that it is *dated*, not what sort of thing it will be.
   const ChipIcon = planned ? CalendarClock : (CHIP_ICONS[entry.eventType] ?? Flag);
 
   return (
     <div className="entry__surface">
-      {/* Keep the title on its own reading line; metadata wraps underneath. */}
+      {/* Metadata shares the title row, wrapping only when the container needs it. */}
       <span className="entry__chip" aria-hidden>
         <ChipIcon size={16} strokeWidth={2} />
       </span>
 
       <div className="entry__main">
         <div className="entry__head">
-          <span className="entry__title selectable">{entry.title}</span>
-          <EventActionsButton entry={entry} onEdit={onEdit} />
-        </div>
+          <div className="entry__heading">
+            <span className="entry__title selectable">{entry.title}</span>
+            <EventActionsButton entry={entry} onEdit={onEdit} />
+          </div>
 
-        <div className={`entry__meta${planned ? ' entry__plan' : ''}`}>
-          {planned ? (
-            <>
-              <span className="entry__plan-date">{formatFullDate(entry.occurredAt)}</span>
-              <span className="entry__plan-countdown">
-                {plannedCountdown(entry.occurredAt)}
-              </span>
-            </>
-          ) : (
-            <span className="entry__time">{formatTimeOfDay(entry.occurredAt)}</span>
-          )}
-          {/*
-            The stage stays explicit beside the time and type, without squeezing
-            a long title into the space left by several competing badges.
-          */}
-          {entry.stage ? <StageChip label={entry.stage} tone={entry.stageTone} /> : null}
-          {/*
-            On a commitment the badge says what it *is* rather than what kind of
-            event it will become: "Planned", or "Overdue" once its date has gone
-            by unconfirmed. That word is the accessible equivalent of the dashed
-            border, so the state never rests on colour alone.
-          */}
-          <span className="entry__badge">
+          <div className={`entry__meta${planned ? ' entry__plan' : ''}`}>
             {planned ? (
               <>
-                <CalendarClock size={10} strokeWidth={2.5} aria-hidden />
-                {overdue ? t('Overdue', '已逾期') : t('Planned', '计划')}
+                <span className="entry__plan-date">{formatFullDate(entry.occurredAt)}</span>
+                <span className="entry__plan-countdown">
+                  {plannedCountdown(entry.occurredAt)}
+                </span>
               </>
             ) : (
-              <>
-                {density === 'milestone' ? (
-                  <Flag size={10} strokeWidth={2.5} aria-hidden />
-                ) : null}
-                {eventTypeLabel(entry)}
-              </>
+              <span className="entry__time">{formatTimeOfDay(entry.occurredAt)}</span>
             )}
-          </span>
+            {/*
+              Keep the time and stage together at the trailing edge. The header
+              can wrap as a whole inside a narrow timeline or history dialog.
+            */}
+            {entry.stage ? <StageChip label={entry.stage} tone={entry.stageTone} /> : null}
+            {/*
+              On a commitment the badge says what it *is* rather than what kind of
+              event it will become: "Planned", or "Overdue" once its date has gone
+              by unconfirmed. That word is the accessible equivalent of the dashed
+              border, so the state never rests on colour alone.
+            */}
+            {showTypeBadge ? (
+              <span className="entry__badge">
+                {planned ? (
+                  <>
+                    <CalendarClock size={10} strokeWidth={2.5} aria-hidden />
+                    {overdue ? t('Overdue', '已逾期') : t('Planned', '计划')}
+                  </>
+                ) : (
+                  <>
+                    {density === 'milestone' ? (
+                      <Flag size={10} strokeWidth={2.5} aria-hidden />
+                    ) : null}
+                    {eventTypeLabel(entry)}
+                  </>
+                )}
+              </span>
+            ) : null}
+          </div>
         </div>
 
         {/*
@@ -339,6 +360,10 @@ function FullBody({
         {/* A transition payload already says what changed; the summary would repeat it. */}
         {entry.summary && !transition ? (
           <p className="entry__summary selectable">{entry.summary}</p>
+        ) : null}
+
+        {entry.images.length > 0 ? (
+          <EventImageGallery images={entry.images} title={entry.title} />
         ) : null}
 
         {entry.reflection ? (

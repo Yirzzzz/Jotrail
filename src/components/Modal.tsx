@@ -5,6 +5,7 @@
 
 import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 
 import './Modal.css';
 
@@ -14,24 +15,29 @@ interface Props {
   onClose: () => void;
   children: ReactNode;
   /** `command` is wider and top-aligned, for the command palette. */
-  variant?: 'dialog' | 'command';
+  variant?: 'dialog' | 'command' | 'image';
 }
 
 export function Modal({ title, description, onClose, children, variant = 'dialog' }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
   const restoreFocusTo = useRef<Element | null>(null);
 
+  // An image can open over a subject-history dialog. Only the frontmost panel
+  // owns keyboard focus and Escape; the underlying dialog must stay open.
+  const isTopmost = () =>
+    Array.from(document.querySelectorAll('[data-modal-panel]')).at(-1) === panelRef.current;
+
   useEffect(() => {
     restoreFocusTo.current = document.activeElement;
 
     // Focus the first field so the user can type immediately.
     const focusable = panelRef.current?.querySelector<HTMLElement>(
-      'input, textarea, select, button:not([data-autofocus="false"])',
+      'input:not([hidden]):not([disabled]), textarea, select, button:not([disabled]):not([data-autofocus="false"])',
     );
     focusable?.focus();
 
     return () => {
-      if (restoreFocusTo.current instanceof HTMLElement) {
+      if (restoreFocusTo.current instanceof HTMLElement && restoreFocusTo.current.isConnected) {
         restoreFocusTo.current.focus();
       }
     };
@@ -39,8 +45,9 @@ export function Modal({ title, description, onClose, children, variant = 'dialog
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (!isTopmost()) return;
       if (event.key === 'Escape') {
-        event.stopPropagation();
+        event.stopImmediatePropagation();
         onClose();
         return;
       }
@@ -52,7 +59,7 @@ export function Modal({ title, description, onClose, children, variant = 'dialog
         panelRef.current.querySelectorAll<HTMLElement>(
           'input, textarea, select, button, [href], [tabindex]:not([tabindex="-1"])',
         ),
-      ).filter((element) => !element.hasAttribute('disabled'));
+      ).filter((element) => !element.hasAttribute('disabled') && !element.hidden);
 
       const first = focusable.at(0);
       const last = focusable.at(-1);
@@ -71,16 +78,17 @@ export function Modal({ title, description, onClose, children, variant = 'dialog
     return () => document.removeEventListener('keydown', onKeyDown, true);
   }, [onClose]);
 
-  return (
+  return createPortal(
     <div
       className={`modal modal--${variant}`}
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (event.target === event.currentTarget && isTopmost()) onClose();
       }}
     >
       <div
         ref={panelRef}
         className="modal__panel"
+        data-modal-panel
         role="dialog"
         aria-modal="true"
         aria-label={title}
@@ -93,6 +101,7 @@ export function Modal({ title, description, onClose, children, variant = 'dialog
         ) : null}
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

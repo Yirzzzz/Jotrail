@@ -91,21 +91,37 @@ export function useSubjectField({
   /** `null` follows the title in the same way. */
   const [stageChosen, setStageChosen] = useState<string | null>(null);
   const [kindChosen, setKindChosen] = useState('');
+  const [scope, setScope] = useState(journeyId);
 
-  const subjects = useRepoQuery(
-    (repo) => (journeyId ? repo.listSubjects(journeyId) : Promise.resolve([])),
+  // Filing belongs to one Journey. Changing that Journey must not carry a
+  // previous film, register or stage into the next event's save payload.
+  if (scope !== journeyId) {
+    setScope(journeyId);
+    setSubjectIdRaw('');
+    setNameChosen(null);
+    setStageChosen(null);
+    setKindChosen('');
+  }
+
+  const registers = useRepoQuery(
+    async (repo) => {
+      const [subjects, kinds] = journeyId
+        ? await Promise.all([repo.listSubjects(journeyId), repo.subjectKinds(journeyId)])
+        : [[], []];
+      return { journeyId, subjects, kinds };
+    },
     [journeyId],
   );
-  const trackable = subjects.data ?? [];
+  // useRepoQuery keeps previous data while refreshing. Only read results from
+  // the current scope, including during a slow Journey switch.
+  const current = registers.data?.journeyId === journeyId ? registers.data : undefined;
+  const trackable = current?.subjects ?? [];
   const chosenSubject = trackable.find((subject) => subject.id === subjectId) ?? null;
   const isCreating = subjectId === NEW_SUBJECT;
 
-  /*
-   * The registers this Journey has, read off its things rather than fetched: a
-   * `kind` exists only as a property of the rows carrying it, so the list is
-   * already here and a second query would only be a second chance to disagree.
-   */
-  const registerKinds = [...new Set(trackable.map((subject) => subject.kind))];
+  // Configured states already express a register, even before its first item.
+  // The repository includes those zero-item registers as well as existing ones.
+  const registerKinds = current?.kinds.map(([kind]) => kind) ?? [];
 
   // The only register, when there is only one: a select with a single option is a
   // question with one answer.
@@ -115,22 +131,25 @@ export function useSubjectField({
   // Whose vocabulary applies — the chosen thing's, or the one being joined.
   const activeKind = isCreating ? newSubjectKind : (chosenSubject?.kind ?? '');
 
-  const stagesUsedQuery = useRepoQuery(
-    (repo) =>
-      journeyId && activeKind
-        ? repo.subjectStagesUsed(journeyId, activeKind)
-        : Promise.resolve([]),
+  const vocabulary = useRepoQuery(
+    async (repo) => {
+      const [used, set] =
+        journeyId && activeKind
+          ? await Promise.all([
+              repo.subjectStagesUsed(journeyId, activeKind),
+              repo.stageSetForRegister(journeyId, activeKind),
+            ])
+          : [[], null];
+      return { journeyId, kind: activeKind, used, set };
+    },
     [journeyId, activeKind],
   );
-  const registerStageSet = useRepoQuery(
-    (repo) =>
-      journeyId && activeKind
-        ? repo.stageSetForRegister(journeyId, activeKind)
-        : Promise.resolve(null),
-    [journeyId, activeKind],
-  );
-  const stagesUsed = stagesUsedQuery.data ?? [];
-  const setOptions = registerStageSet.data?.options ?? [];
+  const currentVocabulary =
+    vocabulary.data?.journeyId === journeyId && vocabulary.data.kind === activeKind
+      ? vocabulary.data
+      : undefined;
+  const stagesUsed = currentVocabulary?.used ?? [];
+  const setOptions = currentVocabulary?.set?.options ?? [];
 
   /*
    * Everything this register calls a stage: the set's labels plus every stage
@@ -162,11 +181,12 @@ export function useSubjectField({
     setNameChosen(null);
   };
 
-  const isComplete =
-    !isCreating || (newSubjectName.trim().length > 0 && newSubjectKind.trim().length > 0);
-
   let blockedReason: string | null = null;
-  if (isCreating && !newSubjectName.trim()) {
+  if (subjectId && !current) {
+    blockedReason = registers.error
+      ? t('Could not load the associated content.', '无法加载关联内容。')
+      : t('Loading the associated content…', '正在加载关联内容…');
+  } else if (isCreating && !newSubjectName.trim()) {
     blockedReason = t(
       'Name the new one, or pick something else',
       '请为新内容命名，或选择其他内容',
@@ -181,6 +201,9 @@ export function useSubjectField({
    * letting the backend choose.
    */
   const trimmedStage = stage.trim();
+  // A confirmed plan may already reference a subject in another linked Journey.
+  // Keep that id even if this first-Journey picker cannot list it; the repository
+  // checks ownership against all event links, not just the currently shown list.
   const filing: SubjectFiling = isCreating
     ? {
         newSubject: { kind: newSubjectKind.trim(), title: newSubjectName.trim() },
@@ -192,8 +215,8 @@ export function useSubjectField({
 
   return {
     filing,
-    blockedReason: isComplete ? null : blockedReason,
-    isAvailable: trackable.length > 0,
+    blockedReason,
+    isAvailable: registerKinds.length > 0,
     subjectId,
     setSubjectId,
     trackable,
@@ -204,12 +227,15 @@ export function useSubjectField({
     setNewSubjectName: setNameChosen,
     newSubjectKind,
     rawNewSubjectKind: kindChosen,
-    setNewSubjectKind: setKindChosen,
+    setNewSubjectKind: (value) => {
+      setKindChosen(value);
+      setStageChosen(null);
+    },
     stage,
     setStage: setStageChosen,
     stagesUsed,
     setOptions,
-    setName: registerStageSet.data?.name ?? null,
+    setName: currentVocabulary?.set?.name ?? null,
     readFromTitle,
   };
 }
@@ -217,10 +243,9 @@ export function useSubjectField({
 /**
  * The field itself.
  *
- * Absent entirely for a Journey with no register, which is most of them — an empty
- * picker would be chrome advertising a feature the user has not asked for. When
- * present it is optional: "Nothing in particular" is always available, which is
- * what keeps recording easier than filing (AGENTS.md §1).
+ * Absent for a Journey with neither tracked items nor configured states. A state
+ * set is enough to offer the first item here; no detour through another screen.
+ * "Nothing in particular" remains the default, keeping filing optional.
  *
  * @param idPrefix Scopes the element ids, so two of these can never collide if a
  *   screen ever shows both.
@@ -246,11 +271,11 @@ export function SubjectField({
         <span className="field__hint">{t('Optional', '选填')}</span>
       </label>
 
-      <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
         <select
           id={`${idPrefix}-subject`}
           className="input"
-          style={{ flex: 1 }}
+          style={{ flex: '1 1 180px', minWidth: 0 }}
           value={field.subjectId}
           onChange={(event) => field.setSubjectId(event.target.value)}
         >
@@ -283,7 +308,7 @@ export function SubjectField({
               list={stageListId}
               value={field.stage}
               onChange={(event) => field.setStage(event.target.value)}
-              placeholder={t('Submitted · First interview', '投稿 · 一面')}
+              placeholder={t('Stage', '阶段')}
               aria-label={t('Stage it reached', '到达的阶段')}
               autoComplete="off"
             />
@@ -296,6 +321,12 @@ export function SubjectField({
         ) : null}
       </div>
 
+      {!field.subjectId ? (
+        <span className="field__hint">
+          {t('Select or add an item to set its stage.', '选择或新建内容后，可设置状态。')}
+        </span>
+      ) : null}
+
       {/*
         The new thing, on its own row — below the picker rather than replacing it,
         so the choice that led here stays visible and reversible.
@@ -305,8 +336,8 @@ export function SubjectField({
         Editing either detaches it from the title.
       */}
       {field.isCreating ? (
-        <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
-          <div className="field" style={{ flex: 1 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+          <div className="field" style={{ flex: '1 1 180px', minWidth: 0 }}>
             <label className="field__label" htmlFor={`${idPrefix}-new-subject`}>
               {t('Name in the register', '清单中的名称')}
             </label>
@@ -315,10 +346,6 @@ export function SubjectField({
               className="input"
               value={field.newSubjectName}
               onChange={(event) => field.setNewSubjectName(event.target.value)}
-              placeholder={t(
-                '2027 ICLR · SEER Robotics · Dune: Part Two',
-                '2027 ICLR · 上海仙工 · 沙丘 2',
-              )}
               autoComplete="off"
             />
           </div>
@@ -338,7 +365,6 @@ export function SubjectField({
                 list={`${idPrefix}-register-kinds`}
                 value={field.rawNewSubjectKind}
                 onChange={(event) => field.setNewSubjectKind(event.target.value)}
-                placeholder={t('Papers · Roles', '论文 · 岗位')}
                 autoComplete="off"
               />
               <datalist id={`${idPrefix}-register-kinds`}>
@@ -359,7 +385,6 @@ export function SubjectField({
               list={stageListId}
               value={field.stage}
               onChange={(event) => field.setStage(event.target.value)}
-              placeholder={t('Submitted · First interview', '投稿 · 一面')}
               autoComplete="off"
             />
             <datalist id={stageListId}>
@@ -406,41 +431,12 @@ export function SubjectField({
         </div>
       ) : null}
 
-      {field.subjectId && !field.isCreating ? (
-        <span className="field__hint">
-          {field.chosenSubject?.currentStage
-            ? t(
-                `Currently ${field.chosenSubject.currentStage}. This becomes its stage instead.`,
-                `当前阶段为${field.chosenSubject.currentStage}，将更新为这里填写的阶段。`,
-              )
-            : field.setOptions.length > 0
-              ? t(
-                  `Becomes its stage in the register. Pick one of ${field.setName}'s, or type anything else.`,
-                  `将成为清单中的当前阶段。可以从${field.setName}中选择，也可以输入其他阶段。`,
-                )
-              : t(
-                  'Becomes its stage in the register. Type anything — the register learns it.',
-                  '将成为清单中的当前阶段。自由填写，清单会记住你的用语。',
-                )}
-        </span>
-      ) : null}
-
-      {/*
-        What this will do, said plainly: a row is being added to the register, not
-        just a label to the entry.
-      */}
-      {field.isCreating && !field.blockedReason ? (
+      {field.subjectId && !field.isCreating && field.chosenSubject?.currentStage ? (
         <span className="field__hint">
           {t(
-            `Adds ${field.newSubjectName.trim()} to ${field.newSubjectKind.trim()}${field.stage.trim() ? ` at ${field.stage.trim()}` : ''}, with this entry as its first.`,
-            `将${field.newSubjectName.trim()}加入${field.newSubjectKind.trim()}${field.stage.trim() ? `，阶段为${field.stage.trim()}` : ''}，并以此事件作为第一条记录。`,
+            `Current stage: ${field.chosenSubject.currentStage}`,
+            `当前阶段：${field.chosenSubject.currentStage}`,
           )}
-          {field.readFromTitle
-            ? t(
-                ' Name and stage read from what you wrote above.',
-                '名称和阶段来自你在上方填写的内容。',
-              )
-            : ''}
         </span>
       ) : null}
     </div>

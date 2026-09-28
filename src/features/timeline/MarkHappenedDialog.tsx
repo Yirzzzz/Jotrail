@@ -26,6 +26,7 @@ import { Modal } from '@/components/Modal';
 import { useInvalidate, useRepository } from '@/data/RepositoryContext';
 import { SubjectField, useSubjectField } from '@/features/registers/SubjectField';
 import type { TimelineEntry } from '@/domain/types';
+import { EventImageField, useEventImages } from './EventImages';
 import { useI18n } from '@/lib/i18n';
 import {
   dateInputValue,
@@ -55,6 +56,7 @@ export function MarkHappenedDialog({ entry, onClose }: Props) {
    */
   const now = nowIso();
   const [title, setTitle] = useState(entry.title);
+  const imageField = useEventImages(entry.images);
   const [date, setDate] = useState(dateInputValue(now));
   const [time, setTime] = useState(timeInputValue(now));
 
@@ -81,7 +83,8 @@ export function MarkHappenedDialog({ entry, onClose }: Props) {
     title.trim().length > 0 &&
     occurredAt !== null &&
     subjectField.blockedReason === null &&
-    !isSaving;
+    !isSaving &&
+    !imageField.isReading;
 
   // Name what is missing rather than leaving a dead grey button, as the other
   // two event dialogs do.
@@ -104,6 +107,7 @@ export function MarkHappenedDialog({ entry, onClose }: Props) {
       await repository.confirmTimelineEvent(entry.id, {
         occurredAt,
         title: title.trim(),
+        images: imageField.inputs,
         /*
          * The thing and its stage. `subjectId` is sent explicitly — including as
          * `null` — so unfiling is expressible; omitting the key would mean "leave
@@ -122,18 +126,19 @@ export function MarkHappenedDialog({ entry, onClose }: Props) {
     }
   };
 
+  const close = () => {
+    if (!isSaving) onClose();
+  };
+
   return (
-    <Modal
-      title={t('Mark as happened', '标记为已发生')}
-      description={t(
-        'This moves it onto the record, at the time it actually happened.',
-        '按实际发生的时间，将它正式记入时间线。',
-      )}
-      onClose={onClose}
-    >
+    <Modal title={t('Mark as happened', '标记为已发生')} onClose={close}>
       <form onSubmit={submit}>
         <div className="modal__body">
-          {error ? <p className="error-banner">{error}</p> : null}
+          {error ? (
+            <p className="error-banner" role="alert">
+              {error}
+            </p>
+          ) : null}
 
           {/*
             What it was aiming for, kept visible while re-dating it. Without this
@@ -143,8 +148,8 @@ export function MarkHappenedDialog({ entry, onClose }: Props) {
           <p className="field__hint" style={{ display: 'flex', gap: 'var(--space-1)' }}>
             <CalendarClock size={12} strokeWidth={2} aria-hidden />
             {t(
-              `Planned for ${formatFullDate(entry.plannedFor ?? entry.occurredAt)}. That date is kept.`,
-              `原定于 ${formatFullDate(entry.plannedFor ?? entry.occurredAt)}。原计划日期将被保留。`,
+              `Planned for ${formatFullDate(entry.plannedFor ?? entry.occurredAt)}`,
+              `原计划日期：${formatFullDate(entry.plannedFor ?? entry.occurredAt)}`,
             )}
           </p>
 
@@ -159,12 +164,6 @@ export function MarkHappenedDialog({ entry, onClose }: Props) {
               onChange={(event) => setTitle(event.target.value)}
               autoComplete="off"
             />
-            <span className="field__hint">
-              {t(
-                'Reword it if the plan and the outcome read differently.',
-                '如果结果与计划不同，可以修改描述。',
-              )}
-            </span>
           </div>
 
           {/*
@@ -181,6 +180,8 @@ export function MarkHappenedDialog({ entry, onClose }: Props) {
             idPrefix="mark-happened"
             label={t('What this was', '这件事关于什么')}
           />
+
+          <EventImageField field={imageField} disabled={isSaving} />
 
           <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
             <div className="field" style={{ flex: 1 }}>
@@ -213,7 +214,13 @@ export function MarkHappenedDialog({ entry, onClose }: Props) {
 
         <footer className="modal__footer">
           {blockedReason ? <span className="modal__footer-hint">{blockedReason}</span> : null}
-          <button type="button" className="button" onClick={onClose} data-autofocus="false">
+          <button
+            type="button"
+            className="button"
+            onClick={close}
+            disabled={isSaving}
+            data-autofocus="false"
+          >
             {t('Cancel', '取消')}
           </button>
           <button type="submit" className="button button--primary" disabled={!canSubmit}>

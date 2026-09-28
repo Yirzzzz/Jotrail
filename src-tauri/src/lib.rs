@@ -101,6 +101,7 @@ pub fn run() {
             commands::timeline_list,
             commands::timeline_create_event,
             commands::timeline_update_event,
+            commands::event_image_read,
             commands::timeline_confirm_event,
             commands::timeline_delete_planned_event,
             commands::timeline_revert_confirmed_event,

@@ -25,6 +25,9 @@ rusqlite = { version = "0.32", features = ["bundled", "backup"] }
 chrono = { version = "0.4", default-features = false, features = ["std", "clock", "serde"] }
 uuid = { version = "1", features = ["v4"] }
 thiserror = "1"
+base64 = "0.22"
+image = { version = "0.24.9", default-features = false, features = ["png", "jpeg", "webp"] }
+kamadak-exif = "0.6"
 
 [features]
 # Enabled by `tauri build --debug`; keeps devtools available in debug bundles.

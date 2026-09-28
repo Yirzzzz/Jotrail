@@ -202,9 +202,7 @@ export function TodayScreen() {
             </span>
             <div className="capture__body">
               <span className="capture__label">{t('Something to do', '待办事项')}</span>
-              <TaskComposer
-                placeholder={t('Next action, idea, or reminder…', '下一步、想法或提醒…')}
-              />
+              <TaskComposer placeholder={t('Add a task…', '添加待办…')} />
             </div>
           </div>
         </section>

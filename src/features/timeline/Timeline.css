@@ -321,7 +321,7 @@ button.entry:focus-visible .entry__surface {
   min-width: 0;
 }
 
-/* Type is metadata below the title, alongside the date and any explicit stage. */
+/* Informative types stay beside the time and any user-defined stage. */
 .entry__badge {
   display: inline-flex;
   align-items: center;
@@ -335,7 +335,12 @@ button.entry:focus-visible .entry__surface {
   font-weight: var(--weight-semibold);
   letter-spacing: 0.035em;
   text-transform: uppercase;
-  white-space: nowrap;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.entry__badge svg {
   flex-shrink: 0;
 }
 
@@ -349,15 +354,30 @@ button.entry {
   display: flex;
   align-items: flex-start;
   flex-wrap: wrap;
-  gap: var(--space-1) var(--space-2);
+  gap: var(--space-1) var(--space-4);
+}
+
+/* Leave at least half a line for the title before metadata wraps beneath it. */
+.entry__heading {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  flex: 1 1 50%;
+  min-width: 0;
 }
 
 .entry__meta {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
+  justify-content: flex-end;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
   gap: var(--space-1) var(--space-2);
-  margin-top: var(--space-1);
+  margin-inline-start: auto;
+  padding-block-start: 0.125rem;
+  text-align: right;
 }
 
 .entry__meta > .stage-chip {
@@ -369,7 +389,8 @@ button.entry {
 /*
  * The edit affordance.
  *
- * The title gets the reading width; the small action stays at its trailing edge.
+ * The small action follows the title, leaving the right edge for metadata.
+ * Its reserved space prevents hover/focus from moving the time or state.
  *
  * Quiet until wanted: correcting an event is a rare act, and a pencil on every
  * card would compete with the entry itself. Focus brings it back for keyboard
@@ -379,7 +400,6 @@ button.entry {
   width: 22px;
   height: 22px;
   flex: none;
-  margin-left: auto;
   opacity: 0;
   transition:
     opacity var(--transition-fast),
@@ -408,7 +428,7 @@ button.entry {
 }
 
 .entry__title {
-  flex: 1 1 12ch;
+  flex: 0 1 auto;
   font-family: var(--font-display);
   font-size: var(--text-body);
   font-weight: var(--weight-semibold);
@@ -461,8 +481,11 @@ button.entry--compact:hover {
 }
 
 .entry--compact .entry__head {
-  align-items: baseline;
-  justify-content: flex-start;
+  /* Match the inset of full entries without adding a surface. */
+  padding-inline: calc(var(--space-4) + 1px);
+}
+
+.entry--compact .entry__heading {
   gap: var(--space-3);
 }
 
@@ -477,6 +500,8 @@ button.entry--compact:hover {
   color: var(--success);
   display: inline-grid;
   place-items: center;
+  width: 24px;
+  flex: none;
   transform: translateY(2px);
 }
 
@@ -627,13 +652,9 @@ button.entry--compact:hover {
     inset 0 0 0 1.5px var(--warning);
 }
 
-/* The plan's own date line: the date spelled out, then how far off it is. */
+/* A plan uses the same right-aligned metadata group as a recorded event. */
 .entry__plan {
-  display: flex;
   align-items: baseline;
-  gap: var(--space-2);
-  margin-top: 0.125rem;
-  flex-wrap: wrap;
 }
 
 .entry__plan-date {
@@ -641,6 +662,7 @@ button.entry--compact:hover {
   font-size: var(--text-micro);
   color: var(--ink-secondary);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 /* The countdown is the emphasis: "In 12 days" is the useful half. */

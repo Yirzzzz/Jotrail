@@ -230,7 +230,7 @@ export function plannedCountdown(occurredAt: string, now: Date = new Date()): st
  * decides whether to *offer* the affordance; that one is the guarantee.
  *
  * Note it reads `importance`, not `densityFor`: a minor entry carrying a
- * reflection renders as a full card badged "Event" while its stored weight is
+ * reflection renders at full density while its stored weight is
  * still `compact`, and it stays read-only. Editability follows the weight that
  * was chosen, not the card it happens to draw.
  *
@@ -249,6 +249,17 @@ export function isEditable(
 ): boolean {
   if (entry.eventState === 'planned') return true;
   return entry.eventType === 'event_recorded' && entry.importance === 'normal';
+}
+
+/** Attachments may be corrected without rewriting the event's historical text. */
+export function canEditEventImages(
+  entry: Pick<TimelineEntry, 'eventType' | 'sourceType' | 'sourceId'>,
+): boolean {
+  return (
+    entry.sourceType === null &&
+    entry.sourceId === null &&
+    (entry.eventType === 'event_recorded' || entry.eventType === 'state_changed')
+  );
 }
 
 /** Undo a mistaken confirmation, never turn ordinary or derived history into a plan. */

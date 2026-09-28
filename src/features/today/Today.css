@@ -199,6 +199,20 @@
   border-top: 1px solid var(--rule-faint);
 }
 
+.day__images {
+  padding: 0 var(--space-4) var(--space-3)
+    calc(var(--space-4) + var(--day-chip-column) + var(--day-time-column) + 2 * var(--space-3));
+}
+
+.day__images .event-images {
+  margin-top: 0;
+}
+
+.day__images .event-images__tile {
+  width: 84px;
+  height: 104px;
+}
+
 .day__button {
   display: grid;
   grid-template-columns:

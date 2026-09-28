@@ -8,7 +8,7 @@ use rusqlite::{params, Connection, Row};
 use serde::Deserialize;
 
 use crate::clock::{now_utc, to_utc};
-use crate::db::{journeys_by_event, new_id};
+use crate::db::{event_images, journeys_by_event, new_id};
 use crate::domain::{
     ConfirmPlannedEvent, TimelineEntry, TimelineEvent, TimelineEventPatch, TimelineEventState,
     TimelineImportance,
@@ -143,11 +143,13 @@ pub fn get(conn: &Connection, id: &str) -> AppResult<Option<TimelineEntry>> {
         .unwrap_or_default();
     // One event, so a targeted lookup rather than the whole-table map `list` uses.
     let stage_tone = tone_for(&stage_tones(conn)?, &event);
+    let images = event_images::for_event(conn, &event.id)?;
     Ok(Some(TimelineEntry {
         event,
         journeys,
         tasks,
         stage_tone,
+        images,
     }))
 }
 
@@ -235,6 +237,7 @@ fn list_matching(
     // The colour each recorded stage carries, from the set describing its
     // register. One lookup for the whole list rather than a join per row.
     let tones = stage_tones(conn)?;
+    let mut images_by_event = event_images::by_event(conn)?;
 
     Ok(events
         .into_iter()
@@ -242,11 +245,13 @@ fn list_matching(
             let journeys = by_event.remove(&event.id).unwrap_or_default();
             let tasks = spawned.remove(&event.id).unwrap_or_default();
             let stage_tone = tone_for(&tones, &event);
+            let images = images_by_event.remove(&event.id).unwrap_or_default();
             TimelineEntry {
                 event,
                 journeys,
                 tasks,
                 stage_tone,
+                images,
             }
         })
         .collect())
@@ -314,6 +319,18 @@ pub fn is_editable(event: &TimelineEvent) -> bool {
     event.event_type == "event_recorded" && matches!(event.importance, TimelineImportance::Normal)
 }
 
+/// Adding a photograph does not rewrite dates, milestones or derived history.
+/// Even a read-only milestone may manage its own pictures, but a note/task's
+/// derived event cannot become an independent attachment container.
+pub fn can_edit_images(event: &TimelineEvent) -> bool {
+    event.source_type.is_none()
+        && event.source_id.is_none()
+        && matches!(
+            event.event_type.as_str(),
+            "event_recorded" | "state_changed"
+        )
+}
+
 /// Confirm that a planned event happened, moving it onto the record.
 ///
 /// Two things change together, which is why this is one command: the state flips
@@ -348,6 +365,12 @@ pub fn confirm(
     if !matches!(existing.event_state, TimelineEventState::Planned) {
         return Err(AppError::Invalid(
             "only a planned event can be marked as happened".into(),
+        ));
+    }
+
+    if input.images.is_some() && !can_edit_images(&existing) {
+        return Err(AppError::Invalid(
+            "Images can only be attached to an explicit event".into(),
         ));
     }
 
@@ -473,6 +496,9 @@ pub fn confirm(
             stage
         ],
     )?;
+    if let Some(images) = input.images {
+        event_images::replace_within(&tx, id, &images)?;
+    }
     tx.commit()?;
 
     get(conn, id)?.ok_or_else(|| AppError::NotFound(format!("timeline event `{id}`")))
@@ -566,10 +592,30 @@ pub fn update(conn: &Connection, id: &str, patch: TimelineEventPatch) -> AppResu
         .ok()
         .ok_or_else(|| AppError::NotFound(format!("timeline event `{id}`")))?;
 
-    if !is_editable(&existing) {
+    let images_only = patch.images.is_some()
+        && patch.title.is_none()
+        && patch.summary.is_none()
+        && patch.reflection.is_none()
+        && patch.occurred_at.is_none()
+        && patch.subject_id.is_none()
+        && patch.stage.is_none();
+    if patch.images.is_some() && !can_edit_images(&existing) {
+        return Err(AppError::Invalid(
+            "Images can only be attached to an explicit event".into(),
+        ));
+    }
+    if !is_editable(&existing) && !images_only {
         return Err(AppError::Invalid(
             "only planned events and recorded events of normal weight can be edited".into(),
         ));
+    }
+    if images_only {
+        let tx = conn.unchecked_transaction()?;
+        event_images::replace_within(&tx, id, patch.images.as_deref().unwrap_or_default())?;
+        tx.commit()?;
+        // Do not even normalise other fields on an images-only edit. A stage
+        // can intentionally survive after its subject is untracked, for example.
+        return get(conn, id)?.ok_or_else(|| AppError::NotFound(format!("timeline event `{id}`")));
     }
 
     let title = match patch.title {
@@ -661,7 +707,8 @@ pub fn update(conn: &Connection, id: &str, patch: TimelineEventPatch) -> AppResu
     // described, not what kind of moment it was or when it was written down.
     // Re-dating therefore moves the entry within the existing `occurred_at, seq`
     // ordering without disturbing the tie-break (migration 0002).
-    conn.execute(
+    let tx = conn.unchecked_transaction()?;
+    tx.execute(
         "UPDATE timeline_events
             SET title = ?2, summary = ?3, reflection = ?4, occurred_at = ?5,
                 planned_for = ?6, subject_id = ?7, stage = ?8
@@ -677,6 +724,10 @@ pub fn update(conn: &Connection, id: &str, patch: TimelineEventPatch) -> AppResu
             stage
         ],
     )?;
+    if let Some(images) = patch.images {
+        event_images::replace_within(&tx, id, &images)?;
+    }
+    tx.commit()?;
 
     get(conn, id)?.ok_or_else(|| AppError::NotFound(format!("timeline event `{id}`")))
 }

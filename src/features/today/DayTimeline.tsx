@@ -18,6 +18,7 @@ import type { TimelineEntry } from '@/domain/types';
 import { formatTimeOfDay } from '@/lib/datetime';
 import { penStyle } from '@/lib/pens';
 import { useI18n } from '@/lib/i18n';
+import { EventImageGallery } from '@/features/timeline/EventImages';
 
 interface Props {
   entries: TimelineEntry[];
@@ -83,6 +84,11 @@ export function DayTimeline({ entries, onOpenEntry }: Props) {
             ) : (
               <div className="day__button day__button--static">{body}</div>
             )}
+            {!openable && entry.images.length > 0 ? (
+              <div className="day__images">
+                <EventImageGallery images={entry.images} title={entry.title} />
+              </div>
+            ) : null}
             <span className="visually-hidden">{eventTypeLabel(entry)}</span>
           </li>
         );

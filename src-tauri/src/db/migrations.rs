@@ -49,6 +49,11 @@ const MIGRATIONS: &[Migration] = &[
         name: "stage_sets",
         sql: include_str!("../../migrations/0007_stage_sets.sql"),
     },
+    Migration {
+        version: 8,
+        name: "event_images",
+        sql: include_str!("../../migrations/0008_event_images.sql"),
+    },
 ];
 
 pub fn run(conn: &Connection) -> AppResult<()> {

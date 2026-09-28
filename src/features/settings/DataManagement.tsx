@@ -74,8 +74,8 @@ export function DataManagement() {
         </h2>
         <p className="settings__help">
           {t(
-            'Save a complete snapshot, or take your notes with you as Markdown. Exports also include Journey links, tasks, events and states.',
-            '保存完整快照，或将笔记导出为 Markdown。导出也包含旅程关联、任务、事件和状态。',
+            'Save a complete snapshot including event images, or export Markdown notes, structured data and original event images.',
+            '保存包含事件图片的完整快照，或导出 Markdown 笔记、结构化数据和事件原图。',
           )}
         </p>
         <div className="settings__actions">

@@ -79,6 +79,7 @@ export function createTauriRepository(): Repository {
       invoke<void>('task_unlink_journey', { taskId, journeyId }),
     deleteTask: (id) => invoke<void>('task_delete', { id }),
 
+    readEventImage: (id, variant) => invoke<string>('event_image_read', { id, variant }),
     listTimeline: (options = {}) =>
       invoke<TimelineEntry[]>('timeline_list', {
         journeyId: options.journeyId ?? null,

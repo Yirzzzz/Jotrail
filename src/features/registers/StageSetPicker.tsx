@@ -81,14 +81,7 @@ export function StageSetPicker({ journeyId, kind, current, onClose }: Props) {
   const available = sets.data ?? [];
 
   return (
-    <Modal
-      title={t(`Stages for ${kind}`, `${kind}的阶段`)}
-      description={t(
-        'Reuse a set you have already defined, or make a new one.',
-        '使用已有的阶段集，或创建一个新的。',
-      )}
-      onClose={onClose}
-    >
+    <Modal title={t(`Stages for ${kind}`, `${kind}的阶段`)} onClose={onClose}>
       <div className="modal__body">
         {error ? <p className="error-banner">{error}</p> : null}
 
@@ -104,10 +97,10 @@ export function StageSetPicker({ journeyId, kind, current, onClose }: Props) {
               {current.name}
               {current.registerCount > 1
                 ? t(
-                    ` — also used by ${current.registerCount - 1} other register${
+                    ` — edits also affect ${current.registerCount - 1} other register${
                       current.registerCount - 1 === 1 ? '' : 's'
-                    }, so an edit reaches them too.`,
-                    `——还有 ${current.registerCount - 1} 个清单在使用，编辑也会同步影响它们。`,
+                    }.`,
+                    `——编辑也会影响另外 ${current.registerCount - 1} 个清单。`,
                   )
                 : '.'}
             </span>
@@ -122,12 +115,7 @@ export function StageSetPicker({ journeyId, kind, current, onClose }: Props) {
           </span>
 
           {available.length === 0 ? (
-            <span className="field__hint">
-              {t(
-                'None defined yet. The first one you make becomes reusable by every other register.',
-                '还没有阶段集。创建后，其他所有清单也能重复使用。',
-              )}
-            </span>
+            <span className="field__hint">{t('No stage sets yet.', '暂无阶段集。')}</span>
           ) : (
             <ul className="stage-set-picker">
               {available

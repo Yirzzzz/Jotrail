@@ -1,8 +1,8 @@
 /**
  * Correct an event that was already recorded.
  *
- * Deliberately not a mode on `RecordEventDialog`. Only four things can change —
- * the wording and when it happened — so reusing that form would mean suppressing
+ * Deliberately not a mode on `RecordEventDialog`. The wording, date and optional
+ * images can change, so reusing that form would mean suppressing
  * its Weight, Journeys, state-change and to-do sections, which is more code and
  * more risk than the fields themselves. What an edit *cannot* do is the point:
  * an event's weight, its journeys and the work it revealed are how it sits in
@@ -16,14 +16,22 @@
  * Plan lifecycle actions are separate confirmations: cancelling an unfulfilled
  * plan, or undoing a mistaken confirmation. An otherwise read-only milestone
  * can expose the latter without gaining permission to edit its wording.
+ * Images are independently editable on explicit events, including milestones
+ * and state changes, without unlocking those historical fields (D-062).
  */
 
 import { useState } from 'react';
 
 import { Modal } from '@/components/Modal';
 import { useInvalidate, useRepository } from '@/data/RepositoryContext';
-import { canRevertConfirmation, isEditable, isPlanned } from '@/domain/timeline';
+import {
+  canEditEventImages,
+  canRevertConfirmation,
+  isEditable,
+  isPlanned,
+} from '@/domain/timeline';
 import type { TimelineEntry } from '@/domain/types';
+import { EventImageField, useEventImages } from './EventImages';
 import { useI18n } from '@/lib/i18n';
 import {
   dateInputValue,
@@ -43,11 +51,13 @@ export function EditEventDialog({ entry, onClose }: Props) {
   const invalidate = useInvalidate();
   const planned = isPlanned(entry);
   const editable = isEditable(entry);
+  const imagesEditable = canEditEventImages(entry);
   const revertible = canRevertConfirmation(entry);
 
   const [title, setTitle] = useState(entry.title);
   const [summary, setSummary] = useState(entry.summary ?? '');
   const [reflection, setReflection] = useState(entry.reflection ?? '');
+  const imageField = useEventImages(entry.images);
   const [date, setDate] = useState(dateInputValue(entry.occurredAt));
   const [time, setTime] = useState(timeInputValue(entry.occurredAt));
 
@@ -56,7 +66,12 @@ export function EditEventDialog({ entry, onClose }: Props) {
   const [action, setAction] = useState<'cancel' | 'revert' | null>(null);
 
   const occurredAt = fromDateTimeInputs(date, time);
-  const canSubmit = editable && title.trim().length > 0 && occurredAt !== null && !isSaving;
+  const canSubmit =
+    (editable || imagesEditable) &&
+    title.trim().length > 0 &&
+    occurredAt !== null &&
+    !isSaving &&
+    !imageField.isReading;
 
   // Same courtesy as the record dialog: name what is missing rather than just
   // grey the button out.
@@ -75,12 +90,17 @@ export function EditEventDialog({ entry, onClose }: Props) {
     setError(null);
     try {
       await repository.updateTimelineEvent(entry.id, {
-        title: title.trim(),
-        // Emptied on purpose reads as `null`, which clears the field rather than
-        // storing an empty string.
-        summary: summary.trim() || null,
-        reflection: reflection.trim() || null,
-        occurredAt,
+        ...(editable
+          ? {
+              title: title.trim(),
+              // Emptied on purpose reads as `null`, which clears the field rather than
+              // storing an empty string.
+              summary: summary.trim() || null,
+              reflection: reflection.trim() || null,
+              occurredAt,
+            }
+          : {}),
+        ...(imagesEditable ? { images: imageField.inputs } : {}),
       });
       invalidate();
       onClose();
@@ -179,23 +199,14 @@ export function EditEventDialog({ entry, onClose }: Props) {
           ? t('Edit plan', '编辑计划')
           : editable
             ? t('Edit event', '编辑事件')
-            : t('Manage confirmed plan', '管理已确认的计划')
+            : imagesEditable && !revertible
+              ? t('Edit event images', '编辑事件图片')
+              : t('Manage confirmed plan', '管理已确认的计划')
       }
       description={
-        planned
-          ? t(
-              'Change the wording, or move the date you are working towards.',
-              '修改描述，或调整计划日期。',
-            )
-          : editable
-            ? t(
-                'Fix the wording, or file it at the time it actually happened.',
-                '修改描述，或更正实际发生的时间。',
-              )
-            : t(
-                'This milestone or minor entry keeps its recorded wording. A mistaken confirmation can be undone.',
-                '这条里程碑或简短记录会保留原有描述。误操作的确认可以撤销。',
-              )
+        editable
+          ? undefined
+          : t('Recorded text and dates stay unchanged.', '原有文字和日期不可修改。')
       }
       onClose={close}
     >
@@ -237,6 +248,10 @@ export function EditEventDialog({ entry, onClose }: Props) {
                   rows={2}
                 />
               </div>
+
+              {imagesEditable ? (
+                <EventImageField field={imageField} disabled={isSaving} />
+              ) : null}
 
               <div className="field">
                 <label className="field__label" htmlFor="edit-event-reflection">
@@ -281,16 +296,16 @@ export function EditEventDialog({ entry, onClose }: Props) {
               </div>
             </>
           ) : (
-            <p className="selectable">{entry.title}</p>
+            <>
+              <p className="selectable">{entry.title}</p>
+              {imagesEditable ? (
+                <EventImageField field={imageField} disabled={isSaving} />
+              ) : null}
+            </>
           )}
 
           {planned || revertible ? (
             <div className="edit-event__plan-action">
-              <p className="field__hint">
-                {planned
-                  ? t('No longer going ahead?', '不再继续这项计划？')
-                  : t('Marked as happened by mistake?', '误标记为已发生？')}
-              </p>
               <button
                 type="button"
                 className="button button--outline"
@@ -316,11 +331,15 @@ export function EditEventDialog({ entry, onClose }: Props) {
             disabled={isSaving}
             data-autofocus={editable ? 'false' : undefined}
           >
-            {editable ? t('Cancel', '取消') : t('Close', '关闭')}
+            {editable || imagesEditable ? t('Cancel', '取消') : t('Close', '关闭')}
           </button>
-          {editable ? (
+          {editable || imagesEditable ? (
             <button type="submit" className="button button--primary" disabled={!canSubmit}>
-              {isSaving ? t('Saving…', '正在保存…') : t('Save changes', '保存修改')}
+              {isSaving
+                ? t('Saving…', '正在保存…')
+                : editable
+                  ? t('Save changes', '保存修改')
+                  : t('Save images', '保存图片')}
             </button>
           ) : null}
         </footer>

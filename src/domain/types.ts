@@ -176,7 +176,22 @@ export interface ProposedSubject {
   events: [string, string, string][];
 }
 
+/** Locally owned event attachment; binary data is loaded separately on demand. */
+export interface EventImage {
+  id: string;
+  eventId: string;
+  fileName: string;
+  mimeType: 'image/png' | 'image/jpeg' | 'image/webp';
+  byteSize: number;
+  width: number;
+  height: number;
+}
+
+/** An ordered attachment selection: keep an existing image, or import new bytes. */
+export type EventImageInput = { id: string } | { fileName: string; dataBase64: string };
+
 export interface TimelineEntry extends TimelineEvent {
+  images: EventImage[];
   journeys: JourneyRef[];
   /**
    * Tasks this event produced, rendered inside the entry — an interview and the
@@ -243,6 +258,8 @@ export interface NotePatch {
  * `null` clears a field; leaving the key off leaves it alone.
  */
 export interface TimelineEventPatch {
+  /** Omitted preserves images; an empty list removes all attachments. */
+  images?: EventImageInput[];
   title?: string;
   summary?: string | null;
   reflection?: string | null;
@@ -273,6 +290,8 @@ export interface NewTaskInput {
 }
 
 export interface NewTimelineEventInput {
+  /** Imported and validated in the same transaction as the event. */
+  images?: EventImageInput[];
   eventType?: string;
   title: string;
   summary?: string;
@@ -493,6 +512,8 @@ export interface RegisterTally {
  * together.
  */
 export interface ConfirmPlannedEventInput {
+  /** Omitted keeps the planned event's images. */
+  images?: EventImageInput[];
   /** When it actually happened. Defaults to now on the Rust side. */
   occurredAt?: string;
   /** An optional rewording, saving a second trip through the edit dialog. */

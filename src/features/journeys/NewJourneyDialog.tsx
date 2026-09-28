@@ -108,8 +108,8 @@ export function NewJourneyDialog({ onClose, onCreated }: Props) {
        */
       const trackedKind = kind.trim();
       if (isTracking && trackedKind) {
-        // A register exists only as a property of its things, so the first item
-        // is what brings it into being.
+        // A first item is optional. Configuring states also makes the register
+        // discoverable, so its first item can be recorded from an event later.
         if (firstItem.trim()) {
           await repository.createSubject({
             journeyId: journey.id,
@@ -140,14 +140,7 @@ export function NewJourneyDialog({ onClose, onCreated }: Props) {
   };
 
   return (
-    <Modal
-      title={t('New Journey', '新建旅程')}
-      description={t(
-        'A Journey is any long-running theme you want to keep a record of.',
-        '旅程是你想持续记录的任何长期主题。',
-      )}
-      onClose={onClose}
-    >
+    <Modal title={t('New Journey', '新建旅程')} onClose={onClose}>
       <form onSubmit={submit}>
         <div className="modal__body">
           {error ? <p className="error-banner">{error}</p> : null}
@@ -161,10 +154,6 @@ export function NewJourneyDialog({ onClose, onCreated }: Props) {
               className="input"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              placeholder={t(
-                'Job search 2026, Fitness, VLA learning…',
-                '秋招 2026, 健身, VLA 学习…',
-              )}
               autoComplete="off"
             />
           </div>
@@ -179,10 +168,6 @@ export function NewJourneyDialog({ onClose, onCreated }: Props) {
               className="input input--textarea"
               value={description}
               onChange={(event) => setDescription(event.target.value)}
-              placeholder={t(
-                'A sentence to remind you why you started.',
-                '用一句话，提醒自己为什么开始。',
-              )}
               rows={3}
             />
           </div>
@@ -198,12 +183,6 @@ export function NewJourneyDialog({ onClose, onCreated }: Props) {
               value={startedAt}
               onChange={(event) => setStartedAt(event.target.value)}
             />
-            <span className="field__hint">
-              {t(
-                'Set an earlier date if this Journey has been going for a while.',
-                '如果这段旅程已经持续了一段时间，可以选择更早的日期。',
-              )}
-            </span>
           </div>
 
           <div className="field">
@@ -255,13 +234,6 @@ export function NewJourneyDialog({ onClose, onCreated }: Props) {
 
             {isTracking ? (
               <div className="disclosure__body">
-                <p className="field__hint">
-                  {t(
-                    'Papers, positions, films — anything this Journey accumulates. Each kind gets its own tab, and you can add more later.',
-                    '论文、岗位、电影——任何在旅程中积累的内容。每种类型都有独立标签页，之后也能继续添加。',
-                  )}
-                </p>
-
                 <div className="field">
                   <label className="field__label" htmlFor="journey-kind">
                     {t('What kind of thing', '内容类型')}
@@ -271,15 +243,8 @@ export function NewJourneyDialog({ onClose, onCreated }: Props) {
                     className="input"
                     value={kind}
                     onChange={(event) => setKind(event.target.value)}
-                    placeholder={t('Papers · Roles · Films', '论文 · 岗位 · 电影')}
                     autoComplete="off"
                   />
-                  <span className="field__hint">
-                    {t(
-                      'Your own word — it becomes a tab, shown as you write it.',
-                      '用你自己的说法命名，它会原样成为一个标签页。',
-                    )}
-                  </span>
                 </div>
 
                 <div className="field">
@@ -292,10 +257,6 @@ export function NewJourneyDialog({ onClose, onCreated }: Props) {
                     className="input"
                     value={firstItem}
                     onChange={(event) => setFirstItem(event.target.value)}
-                    placeholder={t(
-                      '2027 ICLR · ByteDance · Dune: Part Two',
-                      '2027 ICLR · ByteDance · 沙丘 2',
-                    )}
                     autoComplete="off"
                   />
                 </div>
@@ -347,10 +308,6 @@ export function NewJourneyDialog({ onClose, onCreated }: Props) {
                       stages={stages}
                       onChange={setStages}
                       labelPrefix={t('State', '状态')}
-                      hint={t(
-                        'A label and a colour each — Submitted, First interview, Watched. No order to get right: a state says where something stands now, not which step it is.',
-                        '每个状态只有名称和颜色，例如投稿、一面、已看。不必排列顺序：状态表示当前情况，而不是流程中的第几步。',
-                      )}
                     />
                   </div>
                 )}

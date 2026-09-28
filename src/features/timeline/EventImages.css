@@ -1,0 +1,139 @@
+.event-image-field__heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.event-image-field__add {
+  align-self: flex-start;
+}
+
+.event-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.event-images--draft {
+  margin-top: 0;
+}
+
+.event-images__tile,
+.event-images__draft {
+  position: relative;
+  width: 120px;
+  height: 148px;
+  max-width: 100%;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  background: var(--sunk);
+  overflow: hidden;
+}
+
+.event-images__draft {
+  width: 104px;
+  height: 112px;
+}
+
+.entry--compact .event-images {
+  margin-left: var(--space-5);
+}
+
+.event-images__stored,
+.event-images__image {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.event-images__image {
+  display: block;
+  object-fit: contain;
+}
+
+.event-images__open {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  border-radius: inherit;
+  cursor: zoom-in;
+}
+
+.event-images__open:hover {
+  box-shadow: inset 0 0 0 2px var(--violet-rule);
+}
+
+.event-images__open:focus-visible {
+  outline-offset: -3px;
+}
+
+.event-images__remove {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  background: var(--sheet);
+  border: 1px solid var(--rule-strong);
+}
+
+.event-images__unavailable,
+.event-images__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  height: 100%;
+  color: var(--ink-tertiary);
+  font-size: var(--text-micro);
+  text-align: center;
+}
+
+/* Keep retry above the transparent enlarge target without nesting buttons. */
+.event-images__unavailable button {
+  position: relative;
+  z-index: 1;
+  font-size: var(--text-micro);
+}
+
+.modal--image {
+  align-items: center;
+}
+
+.modal--image .modal__panel {
+  max-width: 1040px;
+  height: min(820px, 100%);
+}
+
+.event-image-viewer__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--rule);
+}
+
+.event-image-viewer__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-meta);
+  color: var(--ink-secondary);
+}
+
+.event-image-viewer__body {
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-3);
+  background: var(--sunk);
+}
+
+@media (max-width: 900px) {
+  .event-images__tile {
+    width: 100px;
+    height: 124px;
+  }
+}

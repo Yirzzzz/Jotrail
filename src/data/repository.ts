@@ -77,14 +77,16 @@ export interface Repository {
   deleteTask(id: string): Promise<void>;
 
   // Timeline
+  /** Data URL for an owned local image; timeline lists never transfer original bytes. */
+  readEventImage(id: string, variant: 'thumbnail' | 'original'): Promise<string>;
   listTimeline(options?: {
     journeyId?: string;
     order?: TimelineOrder;
   }): Promise<TimelineEntry[]>;
   createTimelineEvent(input: NewTimelineEventInput): Promise<TimelineEntry>;
   /**
-   * Correct a recorded event's wording or date. Rejects anything `isEditable`
-   * rejects — derived entries, milestones and minor entries (D-040).
+   * Correct a recorded event's wording or date within D-040's edit restrictions.
+   * An images-only patch also permits explicit milestones/state changes (D-062).
    */
   updateTimelineEvent(id: string, patch: TimelineEventPatch): Promise<TimelineEntry>;
   /**
@@ -121,7 +123,7 @@ export interface Repository {
    * stage. Omit `kind` for the Journey's whole set.
    */
   listSubjects(journeyId: string, kind?: string): Promise<SubjectSummary[]>;
-  /** Which registers a Journey has, with a real count each. */
+  /** Registers with subjects or a stage-set configuration; counts only real subjects. */
   subjectKinds(journeyId: string): Promise<[string, number][]>;
   /**
    * Stages already used in this register, most recent first. Stands in for a

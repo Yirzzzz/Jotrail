@@ -1,6 +1,7 @@
 //! SQLite access layer. Everything that touches SQL lives under this module;
 //! commands and the frontend only ever see domain types.
 
+pub mod event_images;
 pub mod journeys;
 pub mod maintenance;
 pub mod migrations;
